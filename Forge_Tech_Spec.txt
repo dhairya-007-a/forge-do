@@ -1,0 +1,234 @@
+# FORGE — Technical & Product Specification
+## (Monarch's First Product) — Build Reference for Engineering
+
+This document is the working spec for engineering. Drop this into the project root
+so Claude Code (and any human engineer) has full context on what to build, how each
+piece should work, and the design direction to follow.
+
+---
+
+## 1. PRODUCT OVERVIEW
+
+Forge is an AI academic assistant for college students. It is NOT a general chatbot —
+every answer is grounded in reviewer-verified coursework content (RAG), routed through
+a tiered AI architecture (cheap model for simple queries, stronger model for complex
+ones), and built to track a student's academic journey over time — not just answer
+one-off questions.
+
+Build sequence: MVP → validate with 20-30 real students → soft-launch 100-500 students
+→ THEN pursue institutional deals. Do not over-build before Step 1 is validated.
+
+---
+
+## 2. CORE FEATURES — WHAT THEY ARE & HOW THEY WORK
+
+### 2.1 AI Doubt-Solving (Core Engine)
+**What it does:** Student asks a coursework question, gets an accurate, syllabus-aligned answer.
+
+**How it works:**
+1. Query comes in → classified as simple or complex (length, retrieval-confidence, topic match)
+2. Simple queries → Tier-1 model (cheap/fast, e.g. Claude Haiku)
+3. Complex queries → Tier-2 model (stronger, e.g. Claude Sonnet)
+4. Before generation, a RAG pipeline retrieves relevant chunks from the vector DB
+   (reviewer-approved content only)
+5. Hybrid search (vector + keyword) + re-ranking picks the best 3-5 chunks
+6. Model generates answer grounded in those chunks, in a consistent structured format
+   (explanation → key concept → example)
+7. If retrieval confidence is low or content doesn't cover the question, the system
+   says so honestly rather than guessing, and escalates to Tier-2 if not already there
+
+**Data needed:** curated syllabus content, verified by subject-matter reviewer before
+it enters the vector database. Never let unverified content into the knowledge base.
+
+### 2.2 Personal AI Tutor
+**What it does:** A persistent tutor personality that adapts to each student's pace,
+weak areas, and learning style over time — not a fresh conversation every time.
+
+**How it works:** Every interaction is logged against the student's profile. The
+system prompt for each session is dynamically built using: recent doubt history,
+known weak topics, preferred explanation style (if learned over time), and current
+exam/semester context.
+
+### 2.3 Doubt History & Weak-Topic Tracking
+**What it does:** Every doubt is saved, tagged by subject/topic. Topics a student
+asks about repeatedly are flagged as "weak areas."
+
+**How it works:** Each doubt gets metadata (subject, topic, sub-topic, timestamp,
+confidence score). A background job aggregates topic frequency per student weekly.
+Topics crossing a repeat-threshold (e.g. 3+ times in 2 weeks) get flagged as weak.
+
+### 2.4 Smart Exam Timetable Planner
+**What it does:** Builds/adjusts a study schedule around upcoming exams and deadlines.
+
+**How it works:** Student inputs exam dates + subjects/topics to cover. System
+generates a day-by-day plan, weighted toward weak topics (pulled from 2.3), and
+re-adjusts if the student falls behind (missed days trigger automatic re-planning).
+
+### 2.5 Daily Timetable Maker
+**What it does:** Separate from exam planning — helps organize everyday study routine
+(not exam-specific). Simple recurring daily/weekly schedule builder.
+
+### 2.6 Exam Readiness Tracker
+**What it does:** Gives a real, data-backed sense of how prepared a student actually is.
+
+**How it works:** Composite score based on: (a) topic coverage — % of syllabus topics
+with logged interaction, (b) weak-topic resolution — are flagged weak topics still
+being asked about or improving, (c) mock test scores if the student logs them,
+(d) recency — has the student engaged with a topic recently or is it stale. Score
+displayed as a simple visual (e.g. 0-100 or a readiness ring), broken down by subject.
+
+### 2.7 Career & Placement Package (Premium)
+**What it does:** Mock interview practice, insight on what top companies ask, resume
+guidance, structured placement prep.
+
+**How it works:** A separate AI flow (still tiered) trained/prompted on interview
+question banks per role/company type. Resume review uses document upload + structured
+AI feedback against common recruiter criteria. Kept as a distinct module from academic
+doubt-solving — different content base, different reviewer if possible.
+
+### 2.8 NEW — Student Pattern Analysis
+**What it does:** Analyzes HOW a student learns and behaves, not just WHAT they ask.
+
+**How it works:** Track behavioral signals over time:
+- Time of day they study most
+- Which subjects they engage with most/least
+- Question complexity trend (are questions getting more advanced over time = progress)
+- Response time to feedback (do they re-ask the same thing after an explanation, or move on)
+- Study consistency (streak data, gaps)
+
+Output: a "learning pattern" profile used to personalize the tutor's approach
+(e.g. "this student learns better with examples than pure theory" — inferred from
+which explanation styles reduce repeat-doubts on similar topics).
+
+### 2.9 NEW — Whole-Semester / Whole-Career Memory & Report Generation
+**What it does:** Instead of only short-term doubt history, the AI retains a
+longitudinal record across the ENTIRE academic journey (all semesters, not just
+recent activity) and can generate a report analyzing growth over time.
+
+**How it works:**
+- Every semester's data (doubts, weak topics, readiness scores, mock results) is
+  archived, not deleted — tagged by semester/term
+- A "Career Memory" record aggregates this across semesters: subjects strengthened,
+  subjects still weak, overall trend (improving/plateauing/declining per subject)
+- On request (or automatically at semester-end), generate a **Student Report**:
+  - Subjects mastered vs. subjects needing continued focus
+  - Learning pattern summary (from 2.8)
+  - Readiness trend over time (chart-style data: readiness score across weeks/months)
+  - Suggested focus areas for the next semester
+- This report should be exportable (PDF) and shareable — a student can show this to
+  themselves, a mentor, or (later) use it as part of the Career/Placement package
+  ("here's evidence of consistent growth in X subject")
+
+**Data model note:** this requires a persistent, append-only student record — never
+overwrite old semester data, always archive and layer new data on top. Design the
+database schema for this from Day 1 (a `student_academic_history` table keyed by
+student_id + semester, not just a single "current state" record) — retrofitting this
+later is expensive.
+
+---
+
+## 3. ADMIN PANEL (Internal — for Monarch team)
+
+**Purpose:** Give the founder/team visibility and control without needing to query
+the database directly.
+
+**Core sections:**
+
+1. **Dashboard (home):** total users, active users (daily/weekly), free vs. premium
+   split, revenue this month, signups trend chart
+2. **Users:** searchable list of all students — view individual profile, usage stats,
+   subscription status, manually grant/revoke premium access (for testing, partnerships, etc.)
+3. **Content Management:** where the subject-matter reviewer uploads/edits/approves
+   curated content before it enters the vector database. Draft → Review → Approved
+   states. Nothing reaches students until "Approved."
+4. **Doubt Quality Monitor:** sample of recent AI answers with the retrieved source
+   content shown side-by-side, so the team can spot-check accuracy. Flag any answer
+   as "incorrect" → routes back to content review.
+5. **Institutional Accounts (for IAR-style deals):** manage bulk licenses — add/remove
+   students under an institution's plan, see aggregate (anonymized) engagement stats
+   per institution, usage caps per plan tier
+6. **Evaluation Dashboard:** track the AI's performance against the maintained test
+   set (Section on evaluation below) — accuracy %, escalation rate (Tier-1 → Tier-2),
+   retrieval relevance score over time. Alert if any metric regresses after a change.
+7. **Feature Flags:** ability to turn features on/off per user segment (e.g. roll out
+   the Career Package to premium users only, test new features with a small % first)
+
+**Access control:** Admin panel is a separate authenticated route, restricted to
+founder/team accounts only — never accessible via the student-facing login.
+
+---
+
+## 4. UI/UX DIRECTION — MINIMALIST & AESTHETIC
+
+**Design philosophy:** Calm, focused, uncluttered. A student opening this while
+stressed before an exam should feel it's easy to use, not overwhelming. Avoid the
+cluttered, ad-heavy feel of many EdTech apps.
+
+**Principles:**
+- **Whitespace-first.** Generous spacing, not dense grids. One primary action per screen.
+- **Limited color palette.** A single accent color (brand color) + neutral grays/whites.
+  Avoid rainbow-colored UI — reserve color for status/emphasis only (e.g. a weak-topic
+  flag in a warm color, readiness score in a calm gradient).
+- **Typography-led, not icon-heavy.** Clean, readable type hierarchy does more work
+  than decorative icons. Use icons sparingly and consistently (one icon set, not mixed).
+- **Chat interface should feel conversational, not clinical.** Soft message bubbles,
+  clear distinction between student input and AI response, subtle typing/thinking
+  indicator during Tier-2 escalation (so the wait feels intentional, not broken).
+- **Dashboard/readiness views should be visual, not table-heavy.** Use simple progress
+  rings, gentle bar charts, trend lines — avoid dense spreadsheet-style data dumps.
+  A student should understand their readiness at a glance, not have to interpret a table.
+  Exception: the Admin Panel can be more data-dense since it's for internal use.
+- **Mobile-first.** Most students will use this on a phone. Design for a single-column,
+  thumb-reachable layout first; expand to desktop second.
+- **Motion should be subtle, not decorative.** Gentle transitions (fade/slide) when
+  content loads — never flashy animation that delays getting to the answer.
+- **Dark mode from Day 1 if feasible** — heavily used by students studying at night;
+  not required for MVP but plan the color system (using CSS variables/tokens) so it's
+  easy to add later without a redesign.
+
+**Reference feeling:** think Notion's calmness + Linear's precision — not a busy,
+gamified EdTech app. Gamification elements (streaks, leaderboards) should be present
+but visually restrained, not the dominant visual language of the app.
+
+---
+
+## 5. TECH STACK (confirmed)
+
+- Frontend: React (Next.js), Tailwind CSS
+- Backend: Python (FastAPI)
+- Database: PostgreSQL, Redis (caching/rate-limiting)
+- AI Layer: Tiered — Claude Haiku (Tier-1) / Claude Sonnet (Tier-2)
+- RAG: Vector DB (Qdrant/Pinecone), hybrid search + re-ranking, LangChain/LlamaIndex
+- Payments: Razorpay
+- Auth: Clerk/Supabase Auth (with institutional email domain verification)
+- Hosting: Vercel (frontend), Railway/Render (backend)
+- Analytics: PostHog | Error tracking: Sentry
+
+---
+
+## 6. QUALITY NON-NEGOTIABLES (do not skip under time pressure)
+
+1. Every piece of content in the vector DB must be reviewer-approved first — no raw,
+   unverified content goes live.
+2. Maintain a 100-200 question evaluation set with verified correct answers. Run it
+   against every meaningful prompt/model/retrieval change before shipping.
+3. Confidence-aware escalation — the system must be able to say "I'm not fully certain"
+   rather than guess. This is a core trust feature, not optional polish.
+4. `student_academic_history` must be designed as append-only/archival from the start
+   (see Section 2.9) — this cannot be bolted on later without a costly migration.
+
+---
+
+## 7. BUILD PRIORITY ORDER (for MVP)
+
+1. Auth + basic user accounts
+2. Core doubt-solving engine (2.1) — one narrow subject first
+3. Doubt history + weak-topic tracking (2.3)
+4. Payment integration + free/premium tier caps
+5. Basic admin panel (content management + user list minimum)
+6. Exam Readiness Tracker (2.6)
+7. Daily + Exam Timetable (2.4, 2.5)
+8. Student Pattern Analysis (2.8) — can start simple, refine later
+9. Whole-career memory + report generation (2.9) — build the DATA MODEL now even if
+   the report UI comes later, since this is the expensive-to-retrofit piece
+10. Career/Placement Package (2.7) — after core product is validated with real students

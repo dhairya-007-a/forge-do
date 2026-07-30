@@ -1,0 +1,134 @@
+import React from 'react';
+
+const Form = () => {
+  return (
+    <div className="signup-wrapper">
+      <style>{`
+        .signup-wrapper .container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          text-align: center;
+          min-height: 100vh;
+          width: 100%;
+        }
+        .signup-wrapper .form_area {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
+          background-color: #EDDCD9;
+          height: auto;
+          width: auto;
+          border: 2px solid #264143;
+          border-radius: 20px;
+          box-shadow: 3px 4px 0px 1px #E99F4C;
+        }
+        .signup-wrapper .title {
+          color: #264143;
+          font-weight: 900;
+          font-size: 1.5em;
+          margin-top: 20px;
+        }
+        .signup-wrapper .sub_title {
+          font-weight: 600;
+          margin: 5px 0;
+        }
+        .signup-wrapper .form_group {
+          display: flex;
+          flex-direction: column;
+          align-items: baseline;
+          margin: 10px;
+        }
+        .signup-wrapper .form_style {
+          outline: none;
+          border: 2px solid #264143;
+          box-shadow: 3px 4px 0px 1px #E99F4C;
+          width: 290px;
+          padding: 12px 10px;
+          border-radius: 4px;
+          font-size: 15px;
+          box-sizing: border-box;
+        }
+        .signup-wrapper select.form_style {
+          background-color: #fff;
+          cursor: pointer;
+        }
+        .signup-wrapper .form_style:focus,
+        .signup-wrapper .btn:focus {
+          transform: translateY(4px);
+          box-shadow: 1px 2px 0px 0px #E99F4C;
+        }
+        .signup-wrapper .btn {
+          padding: 15px;
+          margin: 25px 0px;
+          width: 290px;
+          font-size: 15px;
+          background: #DE5499;
+          border-radius: 10px;
+          font-weight: 800;
+          box-shadow: 3px 3px 0px 0px #E99F4C;
+          border: none;
+          cursor: pointer;
+        }
+        .signup-wrapper .btn:hover {
+          opacity: .9;
+        }
+        .signup-wrapper .link {
+          font-weight: 800;
+          color: #264143;
+          padding: 5px;
+        }
+      `}</style>
+      <div className="container">
+        <div className="form_area">
+          <p className="title">SIGN UP</p>
+          <form>
+            <div className="form_group">
+              <label className="sub_title" htmlFor="name">Name</label>
+              <input placeholder="Enter your full name" id="name" className="form_style" type="text" />
+            </div>
+            <div className="form_group">
+              <label className="sub_title" htmlFor="college">College</label>
+              <input placeholder="Enter your college name" id="college" className="form_style" type="text" />
+            </div>
+            <div className="form_group">
+              <label className="sub_title" htmlFor="course">Course</label>
+              <input placeholder="Enter your course" id="course" className="form_style" type="text" defaultValue="B.Tech" />
+            </div>
+            <div className="form_group">
+              <label className="sub_title" htmlFor="batch">Batch</label>
+              <select id="batch" className="form_style" defaultValue="">
+                <option value="" disabled>Select your batch</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+              </select>
+            </div>
+            <div className="form_group">
+              <label className="sub_title" htmlFor="sem">Semester</label>
+              <select id="sem" className="form_style" defaultValue="">
+                <option value="" disabled>Select your semester</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+              </select>
+            </div>
+            <div>
+              <button className="btn" type="submit">SIGN UP</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Form;

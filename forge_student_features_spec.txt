@@ -1,0 +1,176 @@
+# FORGE — Student-Requested Features: How They Actually Work
+## Technical Explanation for Claude Code
+
+These features came directly from talking to real students. This document explains,
+for each one, exactly how it connects to the Claude API and what extra pieces (if any)
+are needed beyond a simple API call.
+
+---
+
+## 1. SIMPLE LANGUAGE + REAL-LIFE EXPLANATIONS
+
+**How it works:** This needs NO new infrastructure — it's purely a change to the
+instruction (system prompt) sent to Claude on every doubt-solving or notes request.
+
+**Add this line to the existing prompt:**
+```
+Explain concepts in simple, everyday language. Use real-life analogies and examples
+wherever possible (e.g., relate an engineering concept to something from daily life).
+Avoid dense textbook jargon unless the technical term itself needs to be taught.
+```
+
+**Effort:** Trivial — a one-line prompt change, no new code.
+
+---
+
+## 2. EXAM ANSWER WRITING FEEDBACK ("what's wrong in how I wrote this")
+
+**How it works:** Student submits their written answer (typed, or a photo of handwritten
+work using image input — Claude can read images directly). The AI compares it against
+what a good exam answer should contain — not just factual correctness, but structure,
+completeness, and clarity.
+
+**Flow:**
+1. Student submits: the original question + their written answer (text or photo)
+2. Backend sends both to Claude with this instruction:
+```
+You are an exam evaluator. Given this question and the student's written answer,
+evaluate it as an examiner would:
+- Is the answer factually correct?
+- Is it structured well (introduction, steps/working shown, conclusion)?
+- Are key terms/keywords present that examiners typically look for?
+- What's missing or could be improved?
+Give specific, actionable feedback — not just "good" or "bad." Point to the exact
+part of their answer that needs work.
+
+QUESTION: {question}
+STUDENT'S ANSWER: {student_answer}
+```
+3. Claude returns structured feedback, rendered clearly (what's correct, what's missing,
+   how to improve)
+
+**Important honest note for the engineer:** this is higher-risk than simple doubt-solving
+— test it carefully with real answers and your subject reviewer checking outputs before
+trusting it fully. Build it, but flag it internally as "needs extra QA" before wide use.
+
+**Effort:** Moderate — needs image input handling (if supporting photos) + more careful
+prompt testing than other features.
+
+---
+
+## 3. EXAM DATE NOTIFICATIONS/REMINDERS
+
+**How it works:** This is NOT an AI feature at all — no API call needed. It's a standard
+app feature: student enters their exam date, your backend runs a scheduled job (a
+simple cron job or scheduled task) that sends a notification (push notification, email,
+or in-app alert) as the date approaches (e.g., 7 days, 3 days, 1 day before).
+
+**Effort:** Small, standard engineering — no AI, no extra API cost.
+
+---
+
+## 4. AUTO-GENERATED TESTS BASED ON ACTUAL STUDY PROGRESS
+
+**How it works:** Instead of a generic quiz, this pulls from the student's OWN history
+(what they've actually asked doubts about, what notes they've generated, what topics
+are marked complete in their Strategy Maker plan) and generates a quiz specifically on
+that material.
+
+**Flow:**
+1. Backend queries the student's own data: recent doubts asked, notes generated,
+   completed topics from their strategy plan
+2. Sends this list of topics to Claude with:
+```
+Generate a short quiz (5-10 questions, mix of short and long answer) covering these
+specific topics that the student has studied: {topics_from_history}. Base the
+difficulty on standard B.Tech exam level. Include an answer key.
+```
+3. Return the quiz, let student attempt it, optionally use Feature #2's evaluation
+   logic to check their answers
+
+**This is why saving history properly (from Day 1) matters** — this feature is only
+possible because you're already storing doubt history and strategy progress. No new
+data source needed, just a new way of using data you already have.
+
+**Effort:** Low-moderate — mostly reuses existing data + a new prompt template.
+
+---
+
+## 5. SUMMARIZE
+
+**Already covered in the Notes Generation spec** — same mechanism: student provides
+content, Claude condenses it. No changes needed beyond what's already built.
+
+---
+
+## 6. IMPORTANT TOPICS FROM OLD PAPERS
+
+**How it works:** This is a content-sourcing task, not primarily a technical one.
+Someone (you, or your subject reviewer) needs to actually collect real old exam papers
+for the relevant subjects/university, then feed them to Claude as reference material.
+
+**Flow:**
+1. Old papers (as text, extracted from PDFs) get stored as reference content
+2. When generating notes or a study plan, include this reference material in the prompt:
+```
+Reference material — past exam papers for this subject:
+{old_papers_text}
+
+Based on patterns in these past papers, identify which topics have appeared most
+frequently and mark them as high-priority / frequently tested in your notes or plan.
+```
+
+**Important:** for this test phase, you don't need a full RAG/vector database for this
+— you can just paste the relevant old papers directly into the prompt if the content
+isn't too long. Only if you have a LARGE volume of papers across many subjects would
+you need proper retrieval (RAG) to find the relevant ones automatically. For a 100-student
+test on a few subjects, direct inclusion is simpler and sufficient.
+
+**Effort:** Low technical effort, but real time needed to actually collect old papers.
+
+---
+
+## 7. YOUTUBE VIDEO LINKS
+
+**How it works:** IMPORTANT — Claude cannot browse the internet or verify real links on
+its own by default. If you ask it to "give me a YouTube link," it may generate a link
+that looks real but doesn't actually exist (this is a known limitation, not a bug you
+can prompt your way around).
+
+**The correct way to build this:**
+1. Ask Claude to suggest a SEARCH QUERY, not a direct link:
+```
+Suggest a specific, effective YouTube search query to help a student find a video
+explaining: {topic}
+```
+2. Your backend then uses the **YouTube Data API** (a separate, free-to-use Google API,
+   different from Claude) to actually search YouTube with that query and get back real,
+   verified video results
+3. Display the real video results (title, thumbnail, link) to the student
+
+**Effort:** Moderate — requires setting up a YouTube Data API key (free tier available)
+and a small integration, separate from the Claude API entirely.
+
+---
+
+## SUMMARY TABLE FOR CLAUDE CODE
+
+| Feature | Needs Claude API? | Needs other tools? | Effort |
+|---|---|---|---|
+| Simple language explanations | Yes (prompt change only) | No | Trivial |
+| Exam answer feedback | Yes (with image input) | No | Moderate — extra QA needed |
+| Exam notifications | No | Scheduled job/cron | Small |
+| Auto-generated tests | Yes | Uses existing student data | Low-moderate |
+| Summarize | Yes | No (already built) | Already done |
+| Important topics from old papers | Yes | Manual content collection | Low tech, needs content work |
+| YouTube video links | Partial (query suggestion only) | YouTube Data API (separate) | Moderate |
+
+---
+
+## ONE IMPORTANT PRINCIPLE FOR THE ENGINEER
+
+Every feature above should reuse the SAME backend pattern already established:
+capture input → build a clear prompt → call Claude (Haiku, unless a feature specifically
+needs Sonnet's stronger reasoning, like exam answer evaluation) → parse/tag output →
+render in the UI → log for cost tracking. Don't build separate, inconsistent systems
+for each feature — one consistent pipeline, reused across all of them.

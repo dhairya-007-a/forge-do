@@ -1,0 +1,290 @@
+FORGE - PROJECT STATUS / BACKUP NOTES
+Last updated: 2026-07-28
+Purpose: if this chat session is lost, read this file to know exactly what exists,
+why it exists, what's still missing, and where to pick up.
+
+======================================================================
+1. WHAT FORGE IS
+======================================================================
+Forge is a personal AI academic assistant built for ONE real student:
+  Name:     Dhairya Chhaiya
+  Email:    dhairyachhaiya63@gmail.com
+  Program:  B.Tech Computer Engineering, Semester 3, Section III D
+  College:  Institute of Advanced Research (IAR), School of Computing and Technology
+  Semester started: 27/07/2026 (w.e.f. per official timetable)
+
+Real subjects this semester (from the official timetable PDF, Section III D):
+  NBTCE302T  Data Structures and Algorithms      - Ms. Dhruvi Gajjar     - 4 credits
+  NBTCE303T  Database Management System          - Ms. Roshani Ladwa     - 3 credits
+  NBTCE304T  Object Oriented Programming         - Dr. Tejendra Thakur   - 3 credits
+  NBTCE301T  Digital Electronics                 - Ms. Snehal P. Shah    - 3 credits
+  NDM301T    Discrete Mathematics                - Ms. Rubi Nahar        - 4 credits
+  NIPR301T   Business Ethics and IPR             - Dr. S.N. Singh        - 3 credits
+
+======================================================================
+2. ARCHITECTURE (IMPORTANT - READ BEFORE CHANGING ANYTHING)
+======================================================================
+- 100% static site. No build step, no npm, no bundler, no framework.
+- index.html and student-dashboard.html are the SAME file, kept byte-identical
+  on purpose. Every change to index.html must be copied over student-dashboard.html
+  (cp index.html student-dashboard.html) before considering a task done.
+- admin-dashboard.html is a SEPARATE page (own login gate), reads the same
+  browser's localStorage as index.html to show real activity stats.
+- All "real data" lives in the browser's localStorage. There is NO database.
+  If the browser's storage is cleared, all progress/history is gone.
+- ONE serverless function exists: netlify/functions/generate-note.js
+  - Calls the Anthropic API server-side (key never touches the browser).
+  - Needs ANTHROPIC_API_KEY set as an env var on Netlify (and in local .env
+    for `netlify dev`) - NOT hardcoded anywhere in committed files.
+  - STATUS: key is valid but Anthropic account has $0 credit balance as of
+    last check. Every real call 400s with "credit balance too low" until
+    credits are added at console.anthropic.com -> Plans & Billing.
+  - When it fails (no credits, no network, opened via plain file://), the
+    Notes feature silently falls back to a small local hardcoded note bank
+    (NOTES_BANK: stacks/queues/linked lists/BSTs only) and shows the
+    blinking-face "Couldn't reach Forge AI" error animation.
+- Opening the HTML files by double-click (file://) means the Netlify function
+  and cross-page localStorage sharing are NOT reliable in all browsers.
+  For real testing, use `netlify dev` locally or the deployed Netlify URL.
+
+======================================================================
+3. WHAT'S ACTUALLY BUILT AND WORKING
+======================================================================
+
+[Bug fixes]
+- Fixed a real CSS bug: grid items had no min-width:0, so long real-world
+  text (vs short mock text) would overflow into neighboring tiles ("tiles
+  merging"). Fixed across .stat-card, .panel, schedule/deadline rows.
+- Fixed a real JS crash: leftover references to the OLD fake subject name
+  "Data Structures" (before the curriculum rename) threw an uncaught
+  TypeError that silently killed every script after it on the page -
+  this is why timetable/quiz/flashcards looked "broken" at one point.
+  Found via real headless-Chrome testing, not guesswork.
+
+[Curriculum - real, not fake]
+- Courses page shows the actual 6 subjects above, each with a real chapter
+  list (10 chapters for DSA, 8 each for the others), real faculty names.
+- Chapter progress starts honestly at 0% / chapter 1 (semester just started).
+- Old fake demo courses (Data Structures/UX Design/Calculus II/Microeconomics)
+  and their fake numbers (72%, 45%, GPA 3.7, streak 12 days, etc.) are gone.
+
+[Real study tracking]
+- Completing a Pomodoro FOCUS session logs real minutes to localStorage
+  key `forge-study-log` (date -> minutes).
+- The 84-day heatmap, Current/Longest streak, Days Studied, Total Hours,
+  and the dashboard's "Study Streak" tile all read from that real log.
+  (Previously this was a seeded-random fake generator - now fully real.)
+- New user / cleared storage = honest zeros, no fake placeholder numbers.
+
+[Quiz + Flashcards - real content, all 6 subjects]
+- Flashcards: 36 cards (6 per subject), subject dropdown to switch.
+- Quiz (MCQ): 36 real multiple-choice questions with explanations (6 per
+  subject, confirmed count).
+- Short answer: 3 prompts per subject (18 total). Long answer: 3 prompts
+  per subject (18 total). Both are now SEQUENTIAL (Question 1 of N ->
+  Save & Next -> ... -> Save & Finish), not a single static question.
+- "Questions:" number input (1-30, default 5) next to the subject dropdown
+  controls how many questions per session across all three tabs (MCQ/
+  Short/Long share one subject+count control). If you ask for more than
+  exist for a subject, it reshuffles and cycles rather than erroring.
+- Current GPA tile was REMOVED from the dashboard (user request - no real
+  exam-score data model existed yet to back it honestly).
+
+[Official timetable]
+- New "Official Class Timetable - Section III D (CE)" panel on the
+  Schedule page, listing Monday-Friday classes in the PDF's actual order
+  (subject, real faculty, room, course code).
+- HONEST CAVEAT (still true): the PDF's text extraction doesn't preserve
+  exact column/time boundaries for merged cells. Periods are labeled
+  "P1, P2, ..." not exact clock times, except Monday which mathematically
+  worked out to confirmed 100-min double-periods. If exact clock times
+  are wanted, need the real period start times from the user to lock in.
+- The separate "Weekly Timetable" (personal daily-planner grid, with things
+  like Breakfast/Gym/Study Block) still exists too - it's a DIFFERENT
+  feature (personal routine, not the official class grid) and now uses
+  real subject names instead of fake ones, but times are only approximate/
+  template, not synced to the official grid.
+
+[Admin / Parent view - admin-dashboard.html]
+- Login-gated: email + password checked via SHA-256 hash comparison
+  client-side (crypto.subtle). Credentials: dhairyachhaiya63@gmail.com /
+  (password known to the user - NOT repeated in this file for safety;
+  the hash lives in admin-dashboard.html as AUTH_HASH).
+  IMPORTANT HONEST CAVEAT: this is OBSCURITY, not real security. There is
+  no backend. Anyone who reads the page's JavaScript can bypass the login
+  (e.g. run showAdmin() in devtools, or set
+  sessionStorage.setItem('forge-admin-auth','true')). It stops a casual
+  visitor from seeing the URL and getting data; it does NOT stop a
+  technical person. Real security would need a backend check (could route
+  through the existing Netlify function setup, but that's unbuilt).
+- Shows real stats once logged in: Study Streak, Study Hours (12 wks),
+  Days Studied, Quizzes Taken, MCQ Accuracy, Short/Long Answers Written,
+  Doubts Asked - all read live from the same browser's localStorage.
+- Semester Subjects list (same real 6 subjects, honest "Not started" state).
+
+[UI / branding]
+- Real logo (logo/forge-logo.png, transparent background) used in sidebar,
+  splash screen, onboarding screen, browser favicon. Sidebar version is
+  static/straight now (rotation/hover-animation removed per request).
+  logo/forge-logo.jpg is the older non-transparent version, kept but unused.
+- Sidebar (left icon bar) widened 96px -> 132px, every one of the 13 nav
+  items now has a visible text label under its icon (Home, Readiness,
+  Courses, Calendar, Timer, Ask Forge, Notes, Flashcards, Quiz, Brainstorm,
+  Settings, Messages, Grades).
+- All visible scrollbars hidden (sidebar, main content, timetable grid,
+  chat window, heatmap, charts) via scrollbar-width:none + ::-webkit-
+  scrollbar{display:none}. Scrolling itself still works fully via mouse
+  wheel / touchpad - only the visual bar is gone. Also added
+  overscroll-behavior:contain in a few places to stop scroll-chaining
+  glitches that can make trackpad scrolling feel broken.
+- Splash screen: deleted the old intro video (in_d.mp4, now removed from
+  disk) and the old logo/letter-animation + progress bar. Replaced with
+  the "speeder" loading animation (ported from a React/styled-components
+  file the user provided) - runs ~2.2s then transitions into the app.
+- Signup / onboarding form: restyled with a neo-brutalist look (cream/
+  pink card, bold #264143 borders, offset orange shadows, pink submit
+  button) ported from another React file the user provided. Added a
+  "Batch/Section" field (A-E, defaults to D - the real section). Kept the
+  existing fields (first/last name, email, referral, level, college) since
+  other app logic depends on them (avatar initials, hero greeting text).
+- Ask Forge chat input: in JARVIS THEME ONLY, the input row now has a
+  glowing rotating conic-gradient border (cyan #2FD8FF + red #FF4B3E,
+  matching jarvis's palette) plus a search icon, ported from a third React
+  file the user provided. Every other theme (light/dark) is untouched -
+  scoped entirely under :root[data-theme="jarvis"].
+- Error/offline handling: a blinking-face SVG animation (also ported from
+  a provided React file) shows in two places: (1) inside a Notes card
+  when the real AI call fails (network error, no credits, server error),
+  with a message explaining whether it's showing offline content or found
+  nothing at all; (2) a global banner that slides down from the top of
+  the page whenever the browser goes offline (navigator.onLine / the
+  online/offline events), auto-hides when back online.
+
+======================================================================
+4. WHAT'S NOT DONE YET / EXPLICITLY PAUSED
+======================================================================
+- Real AI-backed Notes generation is WIRED but UNTESTED END-TO-END because
+  the Anthropic account has no credits yet. Once credits are added, test
+  it (open Notes, type any topic e.g. "graph coloring", should call the
+  real API via the Netlify function and return a real structured note).
+- Sketchnote/infographic visual redesign for notes (colorful callout
+  boxes, highlighter headings, doodle icons) - this was SPECCED AND
+  APPROVED in an earlier design doc (see docs/superpowers/specs/ and
+  docs/superpowers/plans/) but NEVER IMPLEMENTED - we got pulled into the
+  API-key/curriculum/quiz work instead. The full plan still exists at:
+    docs/superpowers/plans/2026-07-28-real-data-notes-pdf.md
+  It covers: real courses/deadlines/exam-scores CRUD (localStorage), notes
+  sketchnote redesign, photo/drawing attachments on notes, PDF export via
+  window.print(). Only Task 5 (real study-log -> heatmap/streak) from that
+  plan was actually executed; Tasks 1-4 and 6-9 were NOT done (courses/
+  deadlines/exam-scores are still just static real content, not user-
+  editable with an "Add" form; no PDF export exists yet; no photo/drawing
+  attachments; notes still render as plain cards, not sketchnote-style).
+- Quiz-generation / question-bank expansion via real AI (currently all
+  quiz/flashcard content is hand-written, not AI-generated).
+- Strategy engine (study planning, "how to get 8/9 CGPA" recommendations,
+  daily tracking toward a target) - NOT STARTED. User said "don't work on
+  notes and strategy for now, I'll tell you" - this is still the
+  understanding unless told otherwise.
+- Previous-year-paper upload + AI analysis to find important/recurring
+  topics - NOT STARTED. Needs PDF upload handling + AI summarization.
+- Brainstorm feature - exists as a sidebar nav item / view placeholder,
+  not built out with real functionality.
+- Real backend / actual security (the Tech Spec's original FastAPI +
+  Postgres + vector DB plan) - deliberately NOT built. Everything is
+  static + localStorage + one serverless function, by explicit user choice
+  ("no backend, localStorage is fine").
+- Exact clock-accurate official timetable (see caveat above - only
+  Monday's times are confidence-checked).
+
+======================================================================
+5. UNPROCESSED REFERENCE FILES SITTING IN THE PROJECT
+======================================================================
+These were dropped in by the user as design/content reference but not yet
+used for anything - check with the user before assuming what they're for:
+  - notes/drawing/*.jpg (2 images) - likely notes-drawing style reference
+  - notes/fonts/*.jpg (2 images) - likely handwriting/font reference for notes
+  - notes/notes layout/*.jpg (2 images) - likely notes page layout reference
+  - notes/a76e805391443d2eb49ef58cdd2edbb7.jpg - 4th sketchnote reference
+    (3 others already used to inform the "sketchnote style" spec decision)
+  - jarvish theme/ui elements/*.jpg (4 images) - likely jarvis theme UI
+    reference, not yet reviewed or integrated
+  - jarvish theme/*.jpg (3 images, top level) - likely more jarvis theme
+    reference, not yet reviewed
+  - time-table theme/*.jpg (3 images) - likely a visual style reference
+    for a timetable redesign, not yet reviewed
+  - blob-background.html - a standalone reference/demo file, not wired
+    into the main app
+  - "404 error ui.txt", "loading animation.txt", "login page.txt",
+    "search in ai chat.txt" - these 4 have ALL been read and integrated
+    already (error face, loading speeder, signup form, jarvis chat glow
+    input respectively). Safe to delete if the user wants, or keep as
+    source reference.
+
+======================================================================
+6. FILE STRUCTURE
+======================================================================
+forge v2/
+  index.html                 <- the main app (single file, ~4700+ lines: HTML+CSS+JS)
+  student-dashboard.html     <- MUST stay byte-identical to index.html
+  admin-dashboard.html       <- separate login-gated parent/admin view
+  netlify.toml               <- Netlify config (publish=".", functions dir declared)
+  netlify/functions/
+    generate-note.js         <- serverless function, calls Anthropic API server-side
+  .env                       <- ANTHROPIC_API_KEY for local `netlify dev` (gitignored)
+  .gitignore                 <- excludes .env, node_modules, .netlify
+  logo/
+    forge-logo.png           <- current logo (transparent bg) - USE THIS ONE
+    forge-logo.jpg            <- old logo (white bg) - unused now
+  Forge_Tech_Spec.txt        <- original product spec (aspirational full-product
+                                 vision incl. real backend - NOT what's built;
+                                 treat as north star / future reference only)
+  Sectionwise Timetable_ODD_2026 - BTech-III.pdf  <- source of truth for real
+                                 timetable/subjects/faculty (Section III D)
+  docs/superpowers/specs/    <- design docs from earlier brainstorming sessions
+  docs/superpowers/plans/    <- implementation plans (see section 4 above -
+                                 the real-data-notes-pdf plan is only partially done)
+  notes/, jarvish theme/, time-table theme/, timer background/
+                              <- reference images, some used, some not (see sec. 5)
+  PROJECT_STATUS.txt         <- THIS FILE
+
+Not a git repository (checked at project start - if that's changed, ignore this line).
+
+======================================================================
+7. KEY localStorage KEYS (for debugging / understanding real data)
+======================================================================
+  forge-theme            - 'dark' or 'jarvis' (light is default/unset)
+  forge-onboarded         - 'true' after signup form completed once
+  forge-profile           - JSON: {firstName,lastName,email,referral,course,
+                             semester,batch,level,college}
+  forge-needs-onboarding  - set via data-attribute on <html>, not localStorage itself
+  forge-study-log         - JSON: {"YYYY-MM-DD": minutesStudied} - real, from Pomodoro
+  forge-stat-quizzes      - count of quizzes taken (real)
+  forge-stat-mcqCorrect   - cumulative correct MCQ answers (real)
+  forge-stat-mcqTotal     - cumulative MCQ questions answered (real)
+  forge-stat-short        - count of short answers saved (real)
+  forge-stat-long         - count of long answers saved (real)
+  forge-stat-doubts       - count of doubts asked in chat (real)
+  forge-admin-auth        - sessionStorage (not localStorage), 'true' once admin
+                             login succeeds this browser session
+
+======================================================================
+8. IF PICKING THIS BACK UP LATER
+======================================================================
+Order of what the user is likely to want next (based on stated priorities):
+  1. Confirm Anthropic API credits added -> test real Notes AI end-to-end
+  2. Resume the paused real-data-notes-pdf plan (courses/deadlines/exam-
+     score "Add" forms, sketchnote note redesign, photo/drawing
+     attachments, PDF export) - full plan already written, just needs
+     executing task-by-task
+  3. Strategy engine (CGPA planning) - not designed yet, needs brainstorming
+  4. Previous-year-paper upload + important-topic analysis - not designed yet
+  5. Review the unprocessed reference images (section 5) with the user
+     before assuming what they're for
+
+ALWAYS after any index.html edit: run
+  cp index.html student-dashboard.html
+and verify with a quick check (brace balance / headless Chrome console
+check if available) before considering a task done - a single leftover
+reference to a renamed variable once silently broke half the app, so
+verify, don't assume.

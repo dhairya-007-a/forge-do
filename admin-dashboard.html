@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge — Admin / Parent View</title>
+<link rel="icon" type="image/png" href="logo/forge-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FFF6EE;
+    --cream-2:#EFEDFB;
+    --yellow:#C6C2F2;
+    --yellow-soft:#E8E6FA;
+    --pink:#D86072;
+    --pink-soft:#FBE7EA;
+    --blue:#9E97E0;
+    --blue-soft:#E7E4FB;
+    --green:#D6DC82;
+    --green-soft:#F1F3DE;
+    --ink:#262528;
+    --ink-soft:#726D74;
+    --white:#FFFFFF;
+    --radius-lg:24px;
+    --radius-md:16px;
+    --radius-sm:12px;
+    --shadow:0 10px 30px -12px rgba(38,37,40,0.18);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--cream); color:var(--ink); font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  h1,h2,h3{ font-family:'Fredoka',sans-serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'Space Mono',monospace; }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:22px 40px; background:var(--white); border-bottom:1px solid rgba(36,31,24,0.08);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand .mark{
+    width:38px; height:38px; border-radius:12px; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; background:var(--white);
+    box-shadow:var(--shadow);
+  }
+  .brand .mark img{ width:75%; height:75%; object-fit:contain; }
+  .brand-text b{ font-size:16px; }
+  .brand-text span{ display:block; font-size:11px; color:var(--ink-soft); }
+  .internal-tag{
+    font-family:'Space Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
+    background:var(--pink-soft); color:#7A2632; padding:6px 12px; border-radius:100px;
+  }
+
+  main{ max-width:1100px; margin:0 auto; padding:32px 40px 70px; }
+
+  .student-card{
+    background:var(--white); border-radius:var(--radius-lg); padding:26px; box-shadow:var(--shadow); margin-bottom:24px;
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  }
+  .student-avatar{
+    width:56px; height:56px; border-radius:16px; background:var(--pink-soft); color:#7A2632;
+    display:flex; align-items:center; justify-content:center; font-family:'Fredoka'; font-weight:700; font-size:22px; flex-shrink:0;
+  }
+  .student-meta h2{ font-size:19px; font-weight:600; margin-bottom:2px; }
+  .student-meta p{ font-size:12.5px; color:var(--ink-soft); }
+
+  .stat-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:18px; }
+  @media (max-width:640px){ .stat-row{ grid-template-columns:repeat(2,1fr); } }
+  .stat-card{
+    background:var(--white); border-radius:var(--radius-md); padding:20px; box-shadow:var(--shadow); min-width:0;
+  }
+  .stat-card .num{ font-family:'Fredoka'; font-size:26px; font-weight:600; overflow-wrap:break-word; }
+  .stat-card .label{ font-size:12px; color:var(--ink-soft); font-weight:600; margin-top:4px; overflow-wrap:break-word; }
+
+  .panel{ background:var(--white); border-radius:var(--radius-lg); padding:26px; box-shadow:var(--shadow); margin-bottom:24px; }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; gap:12px; flex-wrap:wrap; }
+  .panel-head h2{ font-size:18px; font-weight:600; }
+  .panel-head p{ font-size:12px; color:var(--ink-soft); }
+
+  /* subject list */
+  .subject-row{ display:flex; align-items:center; gap:14px; padding:12px 0; min-width:0; }
+  .subject-row:not(:last-child){ border-bottom:1px dashed rgba(36,31,24,0.1); }
+  .subject-info{ width:260px; flex-shrink:0; min-width:0; }
+  .subject-info h4{ font-size:13.5px; font-weight:600; overflow-wrap:break-word; }
+  .subject-info p{ font-size:11.5px; color:var(--ink-soft); overflow-wrap:break-word; }
+  .subject-track{ flex:1; min-width:0; height:12px; background:var(--cream-2); border-radius:100px; overflow:hidden; }
+  .subject-fill{ height:100%; border-radius:100px; }
+  .subject-val{ width:90px; flex-shrink:0; text-align:right; font-family:'Space Mono'; font-size:12px; }
+  .subject-tag{
+    width:80px; flex-shrink:0; text-align:center; font-size:10px; font-family:'Space Mono'; text-transform:uppercase;
+    padding:4px 8px; border-radius:100px;
+  }
+  .subject-tag.good{ background:var(--green-soft); color:#3F4A1A; }
+  .subject-tag.mid{ background:var(--yellow-soft); color:#423C8C; }
+  .subject-tag.low{ background:var(--pink-soft); color:#7A2632; }
+
+  .empty-note{ font-size:12.5px; color:var(--ink-soft); background:var(--cream-2); border-radius:var(--radius-sm); padding:12px 14px; margin-top:6px; }
+  .source-note{ font-size:11.5px; color:var(--ink-soft); margin-top:10px; }
+
+  @media (max-width:820px){
+    .topbar, main{ padding-left:20px; padding-right:20px; }
+  }
+
+  .login-screen{
+    position:fixed; inset:0; z-index:1000; background:var(--cream);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-card{
+    background:var(--white); border-radius:var(--radius-lg); box-shadow:var(--shadow);
+    padding:36px 32px; width:100%; max-width:340px;
+  }
+  .login-card .mark{
+    width:44px; height:44px; border-radius:12px; margin-bottom:16px;
+    display:flex; align-items:center; justify-content:center; background:var(--white); box-shadow:var(--shadow);
+  }
+  .login-card .mark img{ width:75%; height:75%; object-fit:contain; }
+  .login-card h2{ font-size:18px; font-weight:600; margin-bottom:4px; }
+  .login-card p{ font-size:12px; color:var(--ink-soft); margin-bottom:20px; }
+  .login-field{ margin-bottom:14px; }
+  .login-field label{ display:block; font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em; }
+  .login-field input{
+    width:100%; border:1px solid rgba(36,31,24,0.14); border-radius:12px; padding:11px 13px;
+    font-family:'Inter'; font-size:13.5px; background:var(--cream-2); color:var(--ink); outline:none;
+  }
+  .login-field input:focus{ border-color:var(--ink-soft); }
+  .login-btn{
+    width:100%; background:var(--ink); color:var(--cream); border:none; border-radius:100px;
+    padding:12px; font-family:'Inter'; font-weight:600; font-size:13.5px; cursor:pointer; margin-top:6px;
+  }
+  .login-error{ font-size:12px; color:#B33A4A; margin-top:10px; min-height:16px; }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="mark"><img src="logo/forge-logo.png" alt="Forge logo"></div>
+    <h2>Admin / Parent View</h2>
+    <p>Sign in to view real study data for this browser.</p>
+    <div class="login-field">
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn">Sign In</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="adminGate" style="display:none;">
+<div class="topbar">
+  <div class="brand">
+    <div class="mark"><img src="logo/forge-logo.png" alt="Forge logo"></div>
+    <div class="brand-text"><b>Forge</b><span>Admin / Parent View</span></div>
+  </div>
+  <div class="internal-tag">Read-only · This browser's data</div>
+</div>
+
+<main>
+  <div class="student-card">
+    <div class="student-avatar" id="studentAvatar">D</div>
+    <div class="student-meta">
+      <h2 id="studentName">Dhairya Chhaiya</h2>
+      <p id="studentProgram">B.Tech Computer Engineering · Semester 3 · Section III D · Institute of Advanced Research</p>
+      <p id="studentEmail">dhairyachhaiya63@gmail.com</p>
+    </div>
+  </div>
+
+  <section class="stat-row">
+    <div class="stat-card"><div class="num" id="statStreak">—</div><div class="label">Study Streak</div></div>
+    <div class="stat-card"><div class="num" id="statHours">—</div><div class="label">Study Hours (12 wks)</div></div>
+    <div class="stat-card"><div class="num" id="statDaysStudied">—</div><div class="label">Days Studied (12 wks)</div></div>
+    <div class="stat-card"><div class="num" id="statQuizzes">—</div><div class="label">Quizzes Taken</div></div>
+    <div class="stat-card"><div class="num" id="statAccuracy">—</div><div class="label">MCQ Accuracy</div></div>
+    <div class="stat-card"><div class="num" id="statShort">—</div><div class="label">Short Answers Written</div></div>
+    <div class="stat-card"><div class="num" id="statLong">—</div><div class="label">Long Answers Written</div></div>
+    <div class="stat-card"><div class="num" id="statDoubts">—</div><div class="label">Doubts Asked</div></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Semester Subjects</h2>
+        <p>Section III D (CE) · Odd Semester 2026-27 · started 27/07/2026</p>
+      </div>
+    </div>
+    <div id="subjectList"></div>
+    <p class="source-note">Chapter progress updates as the student expands chapters on the Courses page in the main app.</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Notes</h2>
+      </div>
+    </div>
+    <div class="empty-note">This view reads live from the same browser's <span class="mono">localStorage</span> as the student dashboard (<a href="index.html">index.html</a>) — quizzes, MCQ accuracy, written answers, study streak, and study hours all update here immediately after the student does them (study time logs when a Pomodoro focus session finishes). If this page is opened as a separate <span class="mono">file://</span> document instead of served from the same site, some browsers won't share localStorage with the main app and these numbers will show as zero — deploy both pages to the same Netlify site (or run a local server) to see real numbers reliably.</div>
+  </section>
+</main>
+</div>
+
+<script>
+const SUBJECTS = [
+  { code:'NBTCE302T', name:'Data Structures and Algorithms', faculty:'Ms. Dhruvi Gajjar', chapters:10, color:'var(--pink)' },
+  { code:'NBTCE303T', name:'Database Management System', faculty:'Ms. Roshani Ladwa', chapters:8, color:'var(--blue)' },
+  { code:'NBTCE304T', name:'Object Oriented Programming', faculty:'Dr. Tejendra Thakur', chapters:8, color:'var(--green)' },
+  { code:'NBTCE301T', name:'Digital Electronics', faculty:'Ms. Snehal P. Shah', chapters:8, color:'var(--yellow)' },
+  { code:'NDM301T', name:'Discrete Mathematics', faculty:'Ms. Rubi Nahar', chapters:8, color:'var(--pink)' },
+  { code:'NIPR301T', name:'Business Ethics and IPR', faculty:'Dr. S.N. Singh', chapters:8, color:'var(--blue)' }
+];
+
+function getStat(key){ return parseInt(localStorage.getItem('forge-stat-' + key) || '0', 10); }
+
+function renderStats(){
+  const quizzes = getStat('quizzes');
+  const mcqCorrect = getStat('mcqCorrect');
+  const mcqTotal = getStat('mcqTotal');
+  document.getElementById('statQuizzes').textContent = quizzes;
+  document.getElementById('statAccuracy').textContent = mcqTotal ? Math.round(mcqCorrect / mcqTotal * 100) + '%' : '—';
+  document.getElementById('statShort').textContent = getStat('short');
+  document.getElementById('statLong').textContent = getStat('long');
+  document.getElementById('statDoubts').textContent = getStat('doubts');
+
+  const log = JSON.parse(localStorage.getItem('forge-study-log') || '{}');
+  const entries = [];
+  for(let i = 83; i >= 0; i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    entries.push(log[key] || 0);
+  }
+  let current = 0;
+  for(let i = entries.length - 1; i >= 0; i--){ if(entries[i] > 0) current++; else break; }
+  const studiedDays = entries.filter(m => m > 0);
+  const totalMinutes = studiedDays.reduce((a,b)=>a+b, 0);
+  document.getElementById('statStreak').textContent = current + (current===1?' day':' days');
+  document.getElementById('statHours').textContent = (totalMinutes/60).toFixed(1) + 'h';
+  document.getElementById('statDaysStudied').textContent = studiedDays.length;
+}
+
+function renderSubjects(){
+  const list = document.getElementById('subjectList');
+  list.innerHTML = '';
+  SUBJECTS.forEach(s=>{
+    const row = document.createElement('div');
+    row.className = 'subject-row';
+    row.innerHTML = `
+      <div class="subject-info"><h4>${s.name}</h4><p>${s.faculty} · ${s.code}</p></div>
+      <div class="subject-track"><div class="subject-fill" style="width:0%; background:${s.color};"></div></div>
+      <div class="subject-val mono">0 / ${s.chapters} ch.</div>
+      <div class="subject-tag mid">Not started</div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+/* ---------- LOGIN GATE ----------
+   Client-side only check (SHA-256 of "email:password" against a stored hash) since this
+   is a static site with no backend/server. This is obscurity, not real security — anyone who
+   reads this script can see the check and bypass it via devtools. It stops a casual visitor
+   from seeing the data by just opening the URL; it will NOT stop someone who inspects the code. */
+const AUTH_HASH = 'c268adea3ee6e836ddb895495755d3590617372bfd371b0b6c9564a0c3717ea9';
+async function sha256Hex(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function showAdmin(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminGate').style.display = 'block';
+  renderStats();
+  renderSubjects();
+}
+if(sessionStorage.getItem('forge-admin-auth') === 'true'){
+  showAdmin();
+}
+document.getElementById('loginBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  const hash = await sha256Hex(email + ':' + password);
+  if(hash === AUTH_HASH){
+    sessionStorage.setItem('forge-admin-auth', 'true');
+    document.getElementById('loginError').textContent = '';
+    showAdmin();
+  } else {
+    document.getElementById('loginError').textContent = 'Wrong email or password.';
+  }
+});
+document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+</script>
+</body>
+</html>
