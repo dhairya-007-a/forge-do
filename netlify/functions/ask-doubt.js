@@ -1,28 +1,15 @@
 // Netlify serverless function — keeps the OpenRouter API key server-side.
-// The frontend calls POST /.netlify/functions/ask-doubt with { question, tier, history }
+// The frontend calls POST /.netlify/functions/ask-doubt with { question, tier, history, attachment }
 // and never sees the key. Same pipeline shape as generate-note.js: capture input ->
 // build prompt -> call Grok -> parse -> return structured JSON for the UI to render.
+// attachment (optional): { name, type, dataUrl } — an image or PDF the model reads directly
+// (Grok models on OpenRouter support image + file input modalities natively, no OCR library needed).
 // TEMP: using OpenRouter (Grok) instead of Anthropic for testing while the Anthropic account has $0 credit.
 
 const MODEL_BY_TIER = {
   tier1: 'x-ai/grok-4.3',
   tier2: 'x-ai/grok-4.5'
 };
-
-// Mirrors index.html's COURSE_CHAPTERS (chapters only — no `current`, that field
-// doesn't exist server-side and progress is tracked entirely in the browser).
-const SUBJECT_CHAPTERS = {
-  'Data Structures and Algorithms': ['Arrays & Complexity Analysis','Stacks','Queues','Linked Lists','Trees & Binary Search Trees','Graphs','Sorting Algorithms','Hashing','Heaps','Dynamic Programming'],
-  'Database Management System': ['Introduction to DBMS & File Systems','ER Model & Relational Model','Relational Algebra & SQL Basics','Advanced SQL (Joins, Subqueries, Views)','Normalization (1NF–BCNF)','Transactions & Concurrency Control','Indexing & Query Processing','NoSQL & Modern Databases Intro'],
-  'Object Oriented Programming': ['OOP Concepts: Classes & Objects','Constructors & Destructors','Inheritance','Polymorphism (Overloading & Overriding)','Abstract Classes & Interfaces','Exception Handling','File Handling & I/O','Collections & Generics'],
-  'Digital Electronics': ['Number Systems & Codes','Boolean Algebra & Logic Gates','Combinational Circuits (Adders, MUX, Decoders)','Karnaugh Maps & Minimization','Sequential Circuits (Flip-Flops, Latches)','Counters & Registers','Memory Devices (RAM/ROM)','A/D and D/A Converters Intro'],
-  'Discrete Mathematics': ['Set Theory & Relations','Propositional & Predicate Logic','Functions','Combinatorics (Permutations & Combinations)','Graph Theory Basics','Trees (Graph-Theoretic)','Recurrence Relations','Group Theory & Algebraic Structures Intro'],
-  'Business Ethics and IPR': ['Introduction to Business Ethics','Corporate Social Responsibility','Ethical Decision-Making Frameworks','Introduction to IP: Patents, Copyrights, Trademarks','Patent Filing Process','Copyright & Trade Secrets','IPR in the IT & Software Industry','Case Studies & Emerging Issues']
-};
-
-const CHAPTER_LIST_TEXT = Object.entries(SUBJECT_CHAPTERS)
-  .map(([subject, chapters]) => `${subject}:\n${chapters.map(c => `  - ${c}`).join('\n')}`)
-  .join('\n\n');
 
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
@@ -34,12 +21,13 @@ exports.handler = async function(event){
     return { statusCode: 500, body: JSON.stringify({ error: 'OPENROUTER_API_KEY not configured on the server' }) };
   }
 
-  let question, tier, history;
+  let question, tier, history, attachment;
   try{
     const body = JSON.parse(event.body || '{}');
     question = (body.question || '').trim();
     tier = MODEL_BY_TIER[body.tier] ? body.tier : 'tier1';
     history = Array.isArray(body.history) ? body.history : [];
+    attachment = (body.attachment && typeof body.attachment.dataUrl === 'string') ? body.attachment : null;
   } catch(e){
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
   }
@@ -65,23 +53,31 @@ If the student's message refers back to something earlier in the conversation (e
 asked about", "explain it more"), resolve the reference using the conversation history provided, and answer
 about that specific thing rather than asking for clarification.
 
-Each subject has this exact chapter list. When you answer, also identify which ONE chapter the question is
-about, from the chosen subject's list below — use the exact chapter name string, character for character:
-
-${CHAPTER_LIST_TEXT}
+If an image or file is attached, read its actual content (handwritten/printed notes, a textbook page, a
+diagram, a PDF) and ground your answer in what it actually shows — quote or describe the relevant part of it
+rather than answering generically.
 
 Given a student's doubt/question, respond with ONLY valid JSON, no markdown fences, no commentary, in
 exactly this shape:
-{"subject": "string", "topic": "string", "explanation": "string", "keyConcept": "string", "example": "string"}
+{"subject": "string", "explanation": "string", "simpleExplanation": "string", "keyConcept": "string", "example": "string"}
 - "subject" must be one of the 6 subject names above (pick the closest match).
-- "topic" must be the exact chapter name string from that subject's list above, or null if the question
-  doesn't clearly map to one specific chapter (e.g. a general/administrative question).
-- "explanation": a clear, simple answer to the question.
+- "explanation": a clear, complete answer to the question.
+- "simpleExplanation": the same answer said much more simply — short sentences, plainest possible words,
+  as if explaining to someone with no background in the subject at all.
 - "keyConcept": the one core idea the student should remember.
 - "example": a concrete real-life analogy or worked example.
 If the question is unrelated to college coursework, or you are not confident in a grounded answer,
 respond with:
-{"subject": null, "topic": null, "explanation": null, "keyConcept": null, "example": null}`;
+{"subject": null, "explanation": null, "simpleExplanation": null, "keyConcept": null, "example": null}`;
+
+  const userContent = [{ type: 'text', text: question }];
+  if(attachment){
+    if(attachment.type && attachment.type.startsWith('image/')){
+      userContent.push({ type: 'image_url', image_url: { url: attachment.dataUrl } });
+    } else {
+      userContent.push({ type: 'file', file: { filename: attachment.name || 'attachment', file_data: attachment.dataUrl } });
+    }
+  }
 
   try{
     const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -92,11 +88,11 @@ respond with:
       },
       body: JSON.stringify({
         model: MODEL_BY_TIER[tier],
-        max_tokens: 700,
+        max_tokens: 900,
         messages: [
           { role: 'system', content: systemPrompt },
           ...cappedHistory,
-          { role: 'user', content: question }
+          { role: 'user', content: attachment ? userContent : question }
         ]
       })
     });
@@ -117,7 +113,7 @@ respond with:
     }
 
     if(!parsed.explanation){
-      return { statusCode: 200, body: JSON.stringify({ subject: null, topic: null, explanation: null, keyConcept: null, example: null }) };
+      return { statusCode: 200, body: JSON.stringify({ subject: null, explanation: null, simpleExplanation: null, keyConcept: null, example: null }) };
     }
 
     return { statusCode: 200, body: JSON.stringify(parsed) };

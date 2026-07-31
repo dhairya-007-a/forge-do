@@ -1331,36 +1331,7 @@
   }
   .chat-send-btn:hover{ transform:translateY(-2px); }
   .chat-send-btn svg{ width:18px; height:18px; }
-  .chat-send-btn.attach-btn{ background:var(--cream-2); color:var(--ink); border:1px solid rgba(36,31,24,0.12); }
   .chat-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:8px; text-align:center; }
-  :root[data-theme="custom"]{
-    --cream-2: color-mix(in srgb, var(--cream) 85%, black 6%);
-    --ink-soft: color-mix(in srgb, var(--ink) 65%, white);
-    --blue-soft: color-mix(in srgb, var(--blue) 25%, white);
-    --pink-soft: color-mix(in srgb, var(--pink) 25%, white);
-    --green-soft: color-mix(in srgb, var(--green) 25%, white);
-    --yellow-soft: color-mix(in srgb, var(--yellow) 25%, white);
-  }
-  .custom-theme-panel{
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:14px;
-    margin-top:18px; padding-top:18px; border-top:1px solid rgba(36,31,24,0.1);
-  }
-  .custom-theme-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; }
-  .custom-theme-row input[type="color"]{
-    width:40px; height:32px; border:1px solid rgba(36,31,24,0.15); border-radius:8px; cursor:pointer; background:none; padding:2px;
-  }
-  .custom-theme-panel .fc-gen-btn{ grid-column:1/-1; justify-self:start; }
-  .pending-attach-chip{
-    display:flex; align-items:center; gap:8px; padding:8px 12px; margin-top:10px;
-    background:var(--cream-2); border-radius:12px; font-size:12.5px; color:var(--ink);
-  }
-  .pending-attach-chip button{
-    background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; margin-left:auto;
-  }
-  .msg-attachment-chip{
-    display:flex; align-items:center; gap:6px; margin-top:8px; padding:6px 10px;
-    background:rgba(0,0,0,0.06); border-radius:10px; font-size:12px;
-  }
 
   /* ---------- EXAM READINESS ---------- */
   .filter-row{ display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
@@ -1831,48 +1802,6 @@
     font-family:'Inter'; font-weight:600; font-size:13.5px;
   }
 
-  /* ---------- VIVA PREP ---------- */
-  .viva-avatar-picker{ display:flex; gap:12px; flex-wrap:wrap; }
-  .viva-avatar-choice{
-    width:64px; height:64px; border-radius:50%; border:2px solid transparent; background:var(--cream-2);
-    display:flex; align-items:center; justify-content:center; padding:6px; cursor:pointer;
-  }
-  .viva-avatar-choice svg{ width:100%; height:100%; }
-  .viva-avatar-choice.active{ border-color:var(--ink); }
-  .viva-stage{ display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:20px; }
-  .viva-avatar-wrap{ width:180px; height:180px; }
-  .viva-avatar-wrap svg{ width:100%; height:100%; }
-  .viva-avatar-wrap .mouth{
-    transform-box:fill-box; transform-origin:center;
-  }
-  .viva-avatar-wrap.talking .mouth{ animation:vivaTalk .28s ease-in-out infinite alternate; }
-  @keyframes vivaTalk{ from{ transform:scaleY(1); } to{ transform:scaleY(2.4); } }
-  .viva-avatar-wrap.listening{ animation:vivaListenPulse 1.2s ease-in-out infinite; }
-  @keyframes vivaListenPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.04); } }
-  .viva-status{ font-size:13px; color:var(--ink-soft); font-weight:600; }
-  .viva-transcript{
-    max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;
-    margin-bottom:16px; padding:4px;
-  }
-  .viva-turn{ display:flex; }
-  .viva-turn.ai{ justify-content:flex-start; }
-  .viva-turn.student{ justify-content:flex-end; }
-  .viva-turn .bubble{
-    max-width:78%; padding:11px 16px; border-radius:16px; font-size:13.5px; line-height:1.5;
-  }
-  .viva-turn.ai .bubble{ background:var(--white); box-shadow:var(--shadow); border-radius:4px 16px 16px 16px; }
-  .viva-turn.student .bubble{ background:var(--ink); color:var(--cream); border-radius:16px 16px 4px 16px; }
-  .viva-turn .bubble.verdict-correct{ border-left:3px solid var(--green); }
-  .viva-turn .bubble.verdict-partial{ border-left:3px solid var(--yellow); }
-  .viva-turn .bubble.verdict-incorrect{ border-left:3px solid var(--pink); }
-  .viva-answer-row{ display:flex; gap:10px; align-items:flex-end; }
-  .viva-answer-row textarea{
-    flex:1; border:1px solid rgba(36,31,24,0.12); border-radius:14px; padding:11px 14px;
-    font-family:'Inter'; font-size:13px; color:var(--ink); background:var(--cream-2); outline:none; resize:vertical;
-  }
-  .viva-answer-row textarea:focus{ border-color:var(--ink-soft); }
-  .viva-controls{ display:flex; gap:12px; margin-top:16px; }
-
   @media (max-width:1100px){
     .grid{ grid-template-columns:1fr; }
     .stats{ grid-template-columns:repeat(2,1fr); }
@@ -2328,10 +2257,6 @@
       <a data-target="brainstorm" title="Brainstorm">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
         <span class="nav-label">Brainstorm</span>
-      </a>
-      <a data-target="viva" title="Viva Prep">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
-        <span class="nav-label">Viva Prep</span>
       </a>
       <a data-target="settings" title="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -2882,15 +2807,7 @@
           </div>
         </div>
       </div>
-      <div class="pending-attach-chip" id="pendingAttachChip" style="display:none;">
-        <span id="pendingAttachName"></span>
-        <button type="button" id="pendingAttachRemove" title="Remove attachment">✕</button>
-      </div>
       <div class="chat-input-row" id="chatInputRow">
-        <input type="file" id="chatFileInput" accept="image/*,application/pdf" style="display:none;">
-        <button class="chat-send-btn attach-btn" id="chatAttachBtn" title="Attach an image or PDF" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        </button>
         <div class="jsfx-input-wrap">
           <svg class="jsfx-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="22" y1="22" x2="16.65" y2="16.65"/></svg>
           <textarea id="chatInput" rows="1" placeholder="Ask a doubt about any of your subjects…"></textarea>
@@ -2899,7 +2816,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
         </button>
       </div>
-      <div class="chat-hint">Attach an image or PDF and Forge will read it · answers grounded in curated content, not a general chatbot</div>
+      <div class="chat-hint">Simulated demo · answers grounded in curated content only, not a general chatbot</div>
     </section>
     </div>
 
@@ -3045,9 +2962,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>
           </button>
         </div>
-        <div class="quiz-feedback" id="shortFeedback"></div>
         <div class="quiz-submit-row">
-          <button class="quiz-submit-btn btn-pop" id="shortSaveBtn">Check Answer</button>
+          <button class="quiz-submit-btn btn-pop" id="shortSaveBtn">Save &amp; Next</button>
         </div>
       </div>
 
@@ -3061,9 +2977,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>
           </button>
         </div>
-        <div class="quiz-feedback" id="longFeedback"></div>
         <div class="quiz-submit-row">
-          <button class="quiz-submit-btn btn-pop" id="longSaveBtn">Check Answer</button>
+          <button class="quiz-submit-btn btn-pop" id="longSaveBtn">Save &amp; Next</button>
         </div>
       </div>
     </section>
@@ -3111,46 +3026,6 @@
     </section>
     </div>
 
-    <!-- VIVA PREP -->
-    <div class="view" data-view="viva">
-    <section class="panel anim viva-panel">
-      <div class="panel-head">
-        <h2>Viva Prep</h2>
-        <a href="#" onclick="event.preventDefault(); showToast('Simulated voice viva — browser text-to-speech and speech-to-text, not a real examiner');">How it works →</a>
-      </div>
-
-      <div class="viva-setup" id="vivaSetup">
-        <p class="tt-sub" style="margin-bottom:14px;">Pick an examiner and a subject, then start talking.</p>
-        <div class="viva-avatar-picker" id="vivaAvatarPicker"></div>
-        <div class="notes-topic-row" style="margin-top:16px;">
-          <select class="exam-select" id="vivaSubjectSelect" style="margin-bottom:0;"></select>
-          <button class="fc-gen-btn btn-pop" id="vivaStartBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
-            Start Viva
-          </button>
-        </div>
-      </div>
-
-      <div class="viva-session" id="vivaSession" style="display:none;">
-        <div class="viva-stage">
-          <div class="viva-avatar-wrap" id="vivaAvatarWrap"></div>
-          <div class="viva-status" id="vivaStatus">Getting ready…</div>
-        </div>
-        <div class="viva-transcript" id="vivaTranscript"></div>
-        <div class="viva-answer-row">
-          <textarea id="vivaAnswerField" rows="2" placeholder="Click the mic and speak your answer…"></textarea>
-          <button class="mic-btn" id="vivaMicBtn" title="Speak your answer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 19v3"/></svg>
-          </button>
-        </div>
-        <div class="viva-controls">
-          <button class="quiz-submit-btn btn-pop" id="vivaSubmitBtn">Submit Answer</button>
-          <button class="note-action-btn btn-pop" id="vivaEndBtn">End Viva</button>
-        </div>
-      </div>
-    </section>
-    </div>
-
     <!-- SETTINGS -->
     <div class="view" data-view="settings">
     <section class="panel anim">
@@ -3161,16 +3036,6 @@
         </div>
       </div>
       <div class="theme-picker-grid" id="themePickerGrid"></div>
-      <div class="custom-theme-panel" id="customThemePanel" style="display:none;">
-        <div class="custom-theme-row"><label for="ctBg">Background</label><input type="color" id="ctBg"></div>
-        <div class="custom-theme-row"><label for="ctCard">Card background</label><input type="color" id="ctCard"></div>
-        <div class="custom-theme-row"><label for="ctText">Text</label><input type="color" id="ctText"></div>
-        <div class="custom-theme-row"><label for="ctBlue">Accent — blue</label><input type="color" id="ctBlue"></div>
-        <div class="custom-theme-row"><label for="ctPink">Accent — pink</label><input type="color" id="ctPink"></div>
-        <div class="custom-theme-row"><label for="ctGreen">Accent — green</label><input type="color" id="ctGreen"></div>
-        <div class="custom-theme-row"><label for="ctYellow">Accent — yellow</label><input type="color" id="ctYellow"></div>
-        <button class="fc-gen-btn btn-pop" id="ctResetBtn" type="button">Reset to defaults</button>
-      </div>
     </section>
     </div>
 
@@ -3485,11 +3350,10 @@ const THEME_ICONS = {
   light:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
   dark:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
   jarvis:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
-  retro:'<rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M9 21V9"/>',
-  custom:'<path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3c1.9 0 3.4-1.6 3.4-3.5C21 6.5 17 2 12 2z"/><circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="12" cy="7" r="1.2" fill="currentColor"/><circle cx="16.5" cy="10.5" r="1.2" fill="currentColor"/>'
+  retro:'<rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M9 21V9"/>'
 };
 const THEME_ORDER = ['light','dark','jarvis','retro'];
-const THEME_LABELS = { light:'Light mode', dark:'Dark mode', jarvis:'JARVIS mode engaged', retro:'Retro mode: max nostalgia', custom:'Custom colors' };
+const THEME_LABELS = { light:'Light mode', dark:'Dark mode', jarvis:'JARVIS mode engaged', retro:'Retro mode: max nostalgia' };
 
 function getCurrentTheme(){
   return document.documentElement.getAttribute('data-theme') || 'light';
@@ -3498,60 +3362,9 @@ function applyThemeIcon(){
   const current = getCurrentTheme();
   document.getElementById('themeToggleIcon').innerHTML = THEME_ICONS[current] || THEME_ICONS.light;
 }
-const CUSTOM_THEME_DEFAULTS = { cream:'#FFF6EE', white:'#FFFFFF', ink:'#262528', blue:'#9E97E0', pink:'#D86072', green:'#D6DC82', yellow:'#C6C2F2' };
-function getCustomTheme(){
-  return Object.assign({}, CUSTOM_THEME_DEFAULTS, JSON.parse(forgeStore.getItem('forge-custom-theme') || 'null') || {});
-}
-function saveCustomTheme(vals){ forgeStore.setItem('forge-custom-theme', JSON.stringify(vals)); }
-function applyCustomTheme(vals){
-  Object.entries(vals).forEach(([k,v])=> document.documentElement.style.setProperty('--'+k, v));
-}
-function readCustomThemeInputs(){
-  return {
-    cream: document.getElementById('ctBg').value,
-    white: document.getElementById('ctCard').value,
-    ink: document.getElementById('ctText').value,
-    blue: document.getElementById('ctBlue').value,
-    pink: document.getElementById('ctPink').value,
-    green: document.getElementById('ctGreen').value,
-    yellow: document.getElementById('ctYellow').value
-  };
-}
-function fillCustomThemeInputs(vals){
-  document.getElementById('ctBg').value = vals.cream;
-  document.getElementById('ctCard').value = vals.white;
-  document.getElementById('ctText').value = vals.ink;
-  document.getElementById('ctBlue').value = vals.blue;
-  document.getElementById('ctPink').value = vals.pink;
-  document.getElementById('ctGreen').value = vals.green;
-  document.getElementById('ctYellow').value = vals.yellow;
-}
-['ctBg','ctCard','ctText','ctBlue','ctPink','ctGreen','ctYellow'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{
-    const vals = readCustomThemeInputs();
-    applyCustomTheme(vals);
-    saveCustomTheme(vals);
-  });
-});
-document.getElementById('ctResetBtn').addEventListener('click', ()=>{
-  fillCustomThemeInputs(CUSTOM_THEME_DEFAULTS);
-  applyCustomTheme(CUSTOM_THEME_DEFAULTS);
-  saveCustomTheme(CUSTOM_THEME_DEFAULTS);
-  showToast('Custom colors reset');
-});
-
 function setAppTheme(key, opts){
   if(key === 'light'){ document.documentElement.removeAttribute('data-theme'); }
   else { document.documentElement.setAttribute('data-theme', key); }
-  const panel = document.getElementById('customThemePanel');
-  if(key === 'custom'){
-    const vals = getCustomTheme();
-    applyCustomTheme(vals);
-    fillCustomThemeInputs(vals);
-    panel.style.display = 'grid';
-  } else {
-    panel.style.display = 'none';
-  }
   forgeStore.setItem('forge-theme', key);
   applyThemeIcon();
   if(typeof renderThemeSettings === 'function') renderThemeSettings();
@@ -3575,20 +3388,14 @@ const THEME_DEFS = {
   light:  { name:'Light',  desc:'Calm cream & lavender — the Forge default.', bg:'#FFF6EE', dots:['#D86072','#9E97E0','#D6DC82','#C6C2F2'] },
   dark:   { name:'Dark',   desc:'Easy on the eyes for late-night study sessions.', bg:'#15131A', dots:['#E27C8A','#9E97E0','#B9C46E','#9089DE'] },
   jarvis: { name:'JARVIS', desc:'Stark-tech black & electric blue, for the boys.', bg:'#050810', dots:['#2FD8FF','#57C1FF','#39FF88','#FF4B3E'], glow:true },
-  retro:  { name:'Retro',  desc:'Thick black borders, hard shadows, loud colors.', bg:'#FFFBEA', dots:['#111111','#FFD400','#FF5C7A','#06D6A0'] },
-  custom: { name:'Custom', desc:'Pick your own colors for the whole app.' }
+  retro:  { name:'Retro',  desc:'Thick black borders, hard shadows, loud colors.', bg:'#FFFBEA', dots:['#111111','#FFD400','#FF5C7A','#06D6A0'] }
 };
 function renderThemeSettings(){
   const grid = document.getElementById('themePickerGrid');
   if(!grid) return;
   const current = getCurrentTheme();
   grid.innerHTML = '';
-  Object.entries(THEME_DEFS).forEach(([key, defIn])=>{
-    let def = defIn;
-    if(key === 'custom'){
-      const c = getCustomTheme();
-      def = Object.assign({}, defIn, { bg: c.cream, dots: [c.ink, c.blue, c.pink, c.green] });
-    }
+  Object.entries(THEME_DEFS).forEach(([key, def])=>{
     const card = document.createElement('div');
     card.className = 'theme-option-card' + (key === current ? ' active' : '');
     card.innerHTML = `
@@ -3605,13 +3412,6 @@ function renderThemeSettings(){
   });
 }
 renderThemeSettings();
-// Restore the saved theme fully on load — the early <head> script only avoids
-// flash-of-wrong-theme for dark/jarvis; this applies retro/custom correctly too
-// (custom specifically needs its saved colors re-applied via CSS custom properties).
-const initialSavedTheme = forgeStore.getItem('forge-theme');
-if(initialSavedTheme && initialSavedTheme !== getCurrentTheme()){
-  setAppTheme(initialSavedTheme, { silent: true });
-}
 
 /* ---------- NAV + VIEW SWITCHING ---------- */
 document.querySelectorAll('#sideNav a').forEach(a=>{
@@ -4040,18 +3840,11 @@ function findAnswer(text){
   return QA_BANK.find(entry => entry.keywords.some(k => q.includes(k))) || null;
 }
 
-function formatFileSize(bytes){
-  if(bytes < 1024) return bytes + ' B';
-  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/(1024*1024)).toFixed(1) + ' MB';
-}
-
-function appendUserMessage(text, attachment){
+function appendUserMessage(text){
   const win = document.getElementById('chatWindow');
   const el = document.createElement('div');
   el.className = 'msg user';
-  const chip = attachment ? `<div class="msg-attachment-chip">📎 ${attachment.name} (${formatFileSize(attachment.size)})</div>` : '';
-  el.innerHTML = `<div><div class="bubble-user"></div>${chip}</div>`;
+  el.innerHTML = `<div class="bubble-user"></div>`;
   el.querySelector('.bubble-user').textContent = text;
   win.appendChild(el);
   win.scrollTop = win.scrollHeight;
@@ -4079,18 +3872,13 @@ function renderAIMessage(el, tier, entry, apiFailed, question){
   const badge = tier==='tier2' ? '<span class="tier-badge t2">Tier 2 · Deep</span>' : '<span class="tier-badge t1">Tier 1 · Fast</span>';
   const errorBox = apiFailed ? errorFaceBox(entry ? 'Showing offline content instead.' : 'And no offline match for this either.') : '';
   if(entry){
-    const hasSimple = !!entry.simpleExplanation;
     el.querySelector('.ai-card').innerHTML = `
       <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
       ${errorBox}
-      <div class="ai-block"><span class="k">Explanation</span><div class="v" data-role="explanation-text">${entry.explanation}</div></div>
+      <div class="ai-block"><span class="k">Explanation</span><div class="v">${entry.explanation}</div></div>
       <div class="ai-block"><span class="k">Key Concept</span><div class="v">${entry.keyConcept}</div></div>
       <div class="ai-block"><span class="k">Example</span><div class="v">${entry.example}</div></div>
       <div class="notes-card-actions">
-        ${hasSimple ? `<button class="note-action-btn btn-pop" data-action="toggle-simple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-          Simpler explanation
-        </button>` : ''}
         <button class="note-action-btn btn-pop" data-action="save-chat-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
           Save as Note
@@ -4103,15 +3891,6 @@ function renderAIMessage(el, tier, entry, apiFailed, question){
       saveBtn.innerHTML = saveBtn.innerHTML.replace('Save as Note','Saved');
       showToast('Saved to My Notes');
     });
-    const simpleBtn = el.querySelector('[data-action="toggle-simple"]');
-    if(simpleBtn){
-      let showingSimple = false;
-      simpleBtn.addEventListener('click', ()=>{
-        showingSimple = !showingSimple;
-        el.querySelector('[data-role="explanation-text"]').textContent = showingSimple ? entry.simpleExplanation : entry.explanation;
-        simpleBtn.innerHTML = simpleBtn.innerHTML.replace(showingSimple ? 'Simpler explanation' : 'Show detailed', showingSimple ? 'Show detailed' : 'Simpler explanation');
-      });
-    }
   } else {
     el.querySelector('.ai-card').innerHTML = `
       <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
@@ -4128,54 +3907,13 @@ function logDoubtHistory(question, subject){
   forgeStore.setItem('forge-doubt-history', JSON.stringify(history));
 }
 
-let pendingAttachment = null; // { file, name, size, type, dataUrl }
-const MAX_ATTACH_BYTES = 4 * 1024 * 1024; // 4MB
-
-function readFileAsDataUrl(file){
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onload = ()=> resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-document.getElementById('chatAttachBtn').addEventListener('click', ()=>{
-  document.getElementById('chatFileInput').click();
-});
-document.getElementById('chatFileInput').addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  e.target.value = '';
-  if(!file) return;
-  if(file.size > MAX_ATTACH_BYTES){
-    showToast('File too large — max 4MB');
-    return;
-  }
-  if(file.type !== 'application/pdf' && !file.type.startsWith('image/')){
-    showToast('Only images or PDFs can be attached');
-    return;
-  }
-  const dataUrl = await readFileAsDataUrl(file);
-  pendingAttachment = { file, name: file.name, size: file.size, type: file.type, dataUrl };
-  document.getElementById('pendingAttachName').textContent = `📎 ${file.name} (${formatFileSize(file.size)})`;
-  document.getElementById('pendingAttachChip').style.display = 'flex';
-});
-document.getElementById('pendingAttachRemove').addEventListener('click', ()=>{
-  pendingAttachment = null;
-  document.getElementById('pendingAttachChip').style.display = 'none';
-});
-
 async function sendDoubt(){
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if(!text) return;
-
-  const attachment = pendingAttachment;
-  appendUserMessage(text, attachment ? { name: attachment.name, size: attachment.size } : null);
+  appendUserMessage(text);
   input.value = '';
   input.style.height = 'auto';
-  pendingAttachment = null;
-  document.getElementById('pendingAttachChip').style.display = 'none';
 
   const tier = classifyTier(text);
   const thinkingEl = appendThinking(tier);
@@ -4189,10 +3927,7 @@ async function sendDoubt(){
     const resp = await fetch('/.netlify/functions/ask-doubt', {
       method:'POST',
       headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({
-        question:text, tier,
-        attachment: attachment ? { name: attachment.name, type: attachment.type, dataUrl: attachment.dataUrl } : null
-      })
+      body: JSON.stringify({ question:text, tier })
     });
     if(resp.ok){
       const data = await resp.json();
@@ -5973,22 +5708,14 @@ let longIndex = 0;
 function renderShortQuestion(){
   document.getElementById('shortProgress').textContent = `Question ${shortIndex+1} of ${shortPool.length}`;
   document.getElementById('shortQuestionText').textContent = shortPool[shortIndex] ? shortPool[shortIndex].text : '';
-  const field = document.getElementById('shortAnswerField');
-  field.value = ''; field.disabled = false;
-  const fb = document.getElementById('shortFeedback');
-  fb.className = 'quiz-feedback'; fb.innerHTML = '';
-  const btn = document.getElementById('shortSaveBtn');
-  btn.textContent = 'Check Answer'; btn.dataset.phase = 'check'; btn.disabled = false;
+  document.getElementById('shortAnswerField').value = '';
+  document.getElementById('shortSaveBtn').textContent = shortIndex === shortPool.length - 1 ? 'Save & Finish' : 'Save & Next';
 }
 function renderLongQuestion(){
   document.getElementById('longProgress').textContent = `Question ${longIndex+1} of ${longPool.length}`;
   document.getElementById('longQuestionText').textContent = longPool[longIndex] ? longPool[longIndex].text : '';
-  const field = document.getElementById('longAnswerField');
-  field.value = ''; field.disabled = false;
-  const fb = document.getElementById('longFeedback');
-  fb.className = 'quiz-feedback'; fb.innerHTML = '';
-  const btn = document.getElementById('longSaveBtn');
-  btn.textContent = 'Check Answer'; btn.dataset.phase = 'check'; btn.disabled = false;
+  document.getElementById('longAnswerField').value = '';
+  document.getElementById('longSaveBtn').textContent = longIndex === longPool.length - 1 ? 'Save & Finish' : 'Save & Next';
 }
 renderShortQuestion();
 renderLongQuestion();
@@ -5996,77 +5723,30 @@ renderLongQuestion();
 attachMic(document.getElementById('shortMicBtn'), document.getElementById('shortAnswerField'));
 attachMic(document.getElementById('longMicBtn'), document.getElementById('longAnswerField'));
 
-const WRITTEN_QUIZ = {
-  short: { getPool:()=>shortPool, getIndex:()=>shortIndex, setIndex:v=>{shortIndex=v;}, render:renderShortQuestion,
-    fieldId:'shortAnswerField', feedbackId:'shortFeedback', btnId:'shortSaveBtn', statKey:'short', label:'Short' },
-  long: { getPool:()=>longPool, getIndex:()=>longIndex, setIndex:v=>{longIndex=v;}, render:renderLongQuestion,
-    fieldId:'longAnswerField', feedbackId:'longFeedback', btnId:'longSaveBtn', statKey:'long', label:'Long' }
-};
-
-async function checkWrittenAnswer(kind){
-  const cfg = WRITTEN_QUIZ[kind];
-  const btn = document.getElementById(cfg.btnId);
-  const field = document.getElementById(cfg.fieldId);
-  const fb = document.getElementById(cfg.feedbackId);
-  const pool = cfg.getPool();
-  const idx = cfg.getIndex();
-  const isLast = idx === pool.length - 1;
-
-  if(btn.dataset.phase === 'next'){
-    if(isLast){
-      cfg.setIndex(0);
-      showToast(`${cfg.label} answers complete — starting over`);
-    } else {
-      cfg.setIndex(idx + 1);
-    }
-    cfg.render();
-    return;
+document.getElementById('shortSaveBtn').addEventListener('click', ()=>{
+  const val = document.getElementById('shortAnswerField').value.trim();
+  if(val){ bumpStat('short', 1); renderActivityStats(); }
+  if(shortIndex < shortPool.length - 1){
+    shortIndex++;
+    renderShortQuestion();
+    showToast(val ? 'Saved — next question' : 'Skipped (no answer written)');
+  } else {
+    showToast(val ? 'Short answers saved for review — set complete' : 'Write or speak an answer first');
+    if(val){ shortIndex = 0; renderShortQuestion(); }
   }
-
-  const val = field.value.trim();
-  if(!val){ showToast('Write or speak an answer first'); return; }
-
-  btn.disabled = true;
-  btn.textContent = 'Checking…';
-
-  let result = null;
-  try{
-    const resp = await fetch('/.netlify/functions/grade-answer', {
-      method:'POST',
-      headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ subject: quizSubject(), question: pool[idx].text, answer: val })
-    });
-    if(resp.ok){
-      const data = await resp.json();
-      if(data && data.verdict) result = data;
-    }
-  } catch(e){ /* offline, or no Netlify function server (e.g. opened via file://) */ }
-
-  btn.disabled = false;
-
-  if(!result){
-    fb.className = 'quiz-feedback show incorrect';
-    fb.innerHTML = "<b>Couldn't reach Forge AI</b> to grade this — check your connection and try again.";
-    btn.textContent = 'Check Answer';
-    btn.dataset.phase = 'check';
-    return;
+});
+document.getElementById('longSaveBtn').addEventListener('click', ()=>{
+  const val = document.getElementById('longAnswerField').value.trim();
+  if(val){ bumpStat('long', 1); renderActivityStats(); }
+  if(longIndex < longPool.length - 1){
+    longIndex++;
+    renderLongQuestion();
+    showToast(val ? 'Saved — next question' : 'Skipped (no answer written)');
+  } else {
+    showToast(val ? 'Long answers saved for review — set complete' : 'Write or speak an answer first');
+    if(val){ longIndex = 0; renderLongQuestion(); }
   }
-
-  bumpStat(cfg.statKey, 1);
-  if(result.verdict === 'correct') bumpStat(cfg.statKey + 'Correct', 1);
-  renderActivityStats();
-
-  field.disabled = true;
-  fb.className = 'quiz-feedback show ' + (result.verdict === 'correct' ? 'correct' : 'incorrect');
-  const tag = result.verdict === 'correct' ? '<b>Correct.</b> ' : result.verdict === 'partial' ? '<b>Partially right.</b> ' : '<b>Not quite.</b> ';
-  fb.innerHTML = tag + result.feedback;
-
-  btn.textContent = isLast ? 'Finish' : 'Next Question';
-  btn.dataset.phase = 'next';
-}
-
-document.getElementById('shortSaveBtn').addEventListener('click', ()=> checkWrittenAnswer('short'));
-document.getElementById('longSaveBtn').addEventListener('click', ()=> checkWrittenAnswer('long'));
+});
 
 renderMcqQuestion();
 
@@ -6275,226 +5955,6 @@ function renderLeaderboard(){
 bsLoadTopic();
 renderLeaderboard();
 renderBrainstormPattern();
-
-/* ---------- VIVA PREP: simulated voice examiner (browser TTS/STT + SVG animal avatar) ---------- */
-const VIVA_AVATARS = {
-  lion:   { name:'Lion',   fur:'#E8A33D', ear:'tuft',     earColor:'#B5651D', cheek:'#F2C879' },
-  panda:  { name:'Panda',  fur:'#FFFFFF', ear:'round',    earColor:'#232323', cheek:'#FFD9E0', patch:'#232323' },
-  fox:    { name:'Fox',    fur:'#E8703A', ear:'triangle', earColor:'#2B1B12', cheek:'#F5A97F' },
-  owl:    { name:'Owl',    fur:'#8B6F47', ear:'tuft',     earColor:'#5C4626', cheek:'#C9A876' },
-  rabbit: { name:'Rabbit', fur:'#F3E5D8', ear:'long',     earColor:'#F0B8C4', cheek:'#F7C9D2' }
-};
-
-function vivaEarSvg(def){
-  switch(def.ear){
-    case 'round':
-      return `<circle cx="55" cy="45" r="26" fill="${def.earColor}"/><circle cx="145" cy="45" r="26" fill="${def.earColor}"/>`;
-    case 'triangle':
-      return `<path d="M40 60 L58 5 L82 55 Z" fill="${def.earColor}"/><path d="M160 60 L142 5 L118 55 Z" fill="${def.earColor}"/>`;
-    case 'long':
-      return `<ellipse cx="65" cy="15" rx="16" ry="45" fill="${def.earColor}" transform="rotate(-12 65 15)"/><ellipse cx="135" cy="15" rx="16" ry="45" fill="${def.earColor}" transform="rotate(12 135 15)"/>`;
-    case 'tuft':
-    default:
-      return `<path d="M45 55 Q55 10 75 50 Z" fill="${def.earColor}"/><path d="M155 55 Q145 10 125 50 Z" fill="${def.earColor}"/>`;
-  }
-}
-
-function vivaAvatarSvg(key){
-  const def = VIVA_AVATARS[key] || VIVA_AVATARS.lion;
-  return `
-    <svg viewBox="0 0 200 200">
-      ${vivaEarSvg(def)}
-      <circle cx="100" cy="110" r="72" fill="${def.fur}" stroke="rgba(0,0,0,0.08)" stroke-width="2"/>
-      ${def.patch ? `<ellipse cx="72" cy="112" rx="20" ry="24" fill="${def.patch}"/><ellipse cx="128" cy="112" rx="20" ry="24" fill="${def.patch}"/>` : ''}
-      <circle cx="72" cy="108" r="10" fill="#222"/>
-      <circle cx="128" cy="108" r="10" fill="#222"/>
-      <circle cx="75" cy="105" r="3" fill="#fff"/>
-      <circle cx="131" cy="105" r="3" fill="#fff"/>
-      <ellipse cx="55" cy="135" rx="12" ry="8" fill="${def.cheek}" opacity="0.8"/>
-      <ellipse cx="145" cy="135" rx="12" ry="8" fill="${def.cheek}" opacity="0.8"/>
-      <ellipse cx="100" cy="128" rx="9" ry="6" fill="#5A3B2E"/>
-      <ellipse class="mouth" cx="100" cy="148" rx="16" ry="7" fill="#7A2632"/>
-    </svg>`;
-}
-
-function renderVivaAvatarPicker(){
-  const wrap = document.getElementById('vivaAvatarPicker');
-  const current = forgeStore.getItem('forge-viva-avatar') || 'lion';
-  wrap.innerHTML = '';
-  Object.keys(VIVA_AVATARS).forEach(key=>{
-    const btn = document.createElement('div');
-    btn.className = 'viva-avatar-choice' + (key === current ? ' active' : '');
-    btn.title = VIVA_AVATARS[key].name;
-    btn.innerHTML = vivaAvatarSvg(key);
-    btn.addEventListener('click', ()=>{
-      forgeStore.setItem('forge-viva-avatar', key);
-      renderVivaAvatarPicker();
-    });
-    wrap.appendChild(btn);
-  });
-}
-renderVivaAvatarPicker();
-
-document.getElementById('vivaSubjectSelect').innerHTML = STRATEGY_SUBJECTS.map(s=>`<option>${s}</option>`).join('');
-
-let vivaHistory = [];
-let vivaActive = false;
-
-function vivaSetTalking(on){
-  document.getElementById('vivaAvatarWrap').classList.toggle('talking', on);
-}
-function vivaSetListening(on){
-  document.getElementById('vivaAvatarWrap').classList.toggle('listening', on);
-}
-
-function vivaSpeak(text){
-  return new Promise(resolve=>{
-    if(!('speechSynthesis' in window)){ resolve(); return; }
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => /en-(US|GB|IN)/i.test(v.lang) && /female|natural|samantha|aria|zira/i.test(v.name))
-      || voices.find(v => /en-(US|GB|IN)/i.test(v.lang)) || voices[0];
-    if(preferred) utter.voice = preferred;
-    utter.rate = 1;
-    utter.pitch = 1.05;
-    utter.onstart = ()=> vivaSetTalking(true);
-    utter.onend = ()=>{ vivaSetTalking(false); resolve(); };
-    utter.onerror = ()=>{ vivaSetTalking(false); resolve(); };
-    window.speechSynthesis.speak(utter);
-  });
-}
-
-function vivaAppendTurn(role, text, verdict){
-  const list = document.getElementById('vivaTranscript');
-  const row = document.createElement('div');
-  row.className = 'viva-turn ' + (role === 'ai' ? 'ai' : 'student');
-  const verdictClass = verdict ? ` verdict-${verdict}` : '';
-  row.innerHTML = `<div class="bubble${verdictClass}"></div>`;
-  row.querySelector('.bubble').textContent = text;
-  list.appendChild(row);
-  list.scrollTop = list.scrollHeight;
-}
-
-async function vivaRequestTurn(){
-  document.getElementById('vivaStatus').textContent = 'Forge is thinking…';
-  const subject = document.getElementById('vivaSubjectSelect').value;
-  try{
-    const resp = await fetch('/.netlify/functions/viva-turn', {
-      method:'POST',
-      headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ subject, history: vivaHistory })
-    });
-    if(!resp.ok) throw new Error('bad response');
-    const data = await resp.json();
-    if(!data || !data.reply) throw new Error('empty reply');
-
-    if(data.verdict && vivaHistory.length){
-      const lastBubble = document.querySelector('#vivaTranscript .viva-turn.student:last-child .bubble');
-      if(lastBubble) lastBubble.classList.add('verdict-' + data.verdict);
-    }
-
-    vivaAppendTurn('ai', data.reply);
-    vivaHistory.push({ role:'assistant', content: data.reply });
-    document.getElementById('vivaStatus').textContent = 'Forge is speaking…';
-    await vivaSpeak(data.reply);
-    document.getElementById('vivaStatus').textContent = 'Your turn — click the mic and answer';
-  } catch(e){
-    await vivaSimulateTurn(subject);
-  }
-}
-
-/* --- Simulated fallback: no real grading, just a convincing demo loop for when the API is unavailable --- */
-const VIVA_SIM_QUESTIONS = {
-  'Data Structures and Algorithms': ['Can you explain what a stack is and where it gets used?', 'How does a binary search tree speed up lookups compared to a plain array?', "What's the difference between a stack and a queue?"],
-  'Database Management System': ['Can you tell me what problem normalization actually solves?', 'What is a foreign key used for?', 'What does an index do in a database, and why does it help?'],
-  'Object Oriented Programming': ['Can you explain encapsulation in your own words?', 'What is inheritance, and why is it useful?', 'How is polymorphism different from overloading?'],
-  'Digital Electronics': ['What does a multiplexer do?', 'Can you explain what a flip-flop is used for?', 'Why do we use binary instead of decimal in digital circuits?'],
-  'Discrete Mathematics': ["What's the difference between a permutation and a combination?", 'Can you define a function in mathematical terms?', 'What defines a tree in graph theory?'],
-  'Business Ethics and IPR': ["What's the difference between a patent and a copyright?", 'Can you explain corporate social responsibility?', 'What is a trade secret?']
-};
-let vivaSimAsked = new Set();
-
-function vivaPickSimQuestion(subject){
-  const pool = VIVA_SIM_QUESTIONS[subject] || VIVA_SIM_QUESTIONS['Data Structures and Algorithms'];
-  const remaining = pool.filter(q => !vivaSimAsked.has(q));
-  const question = remaining.length ? remaining[0] : pool[Math.floor(Math.random() * pool.length)];
-  vivaSimAsked.add(question);
-  return question;
-}
-
-async function vivaSimulateTurn(subject){
-  const isOpening = vivaHistory.length === 0;
-
-  if(isOpening){
-    const question = vivaPickSimQuestion(subject);
-    vivaAppendTurn('ai', question);
-    vivaHistory.push({ role:'assistant', content: question });
-    document.getElementById('vivaStatus').textContent = 'Forge is speaking… (simulated demo)';
-    await vivaSpeak(question);
-    document.getElementById('vivaStatus').textContent = 'Your turn — click the mic and answer';
-    return;
-  }
-
-  const lastAnswer = vivaHistory[vivaHistory.length - 1].content;
-
-  // "act like it got the answer" — a brief acknowledging reaction before responding properly
-  document.getElementById('vivaStatus').textContent = 'Forge heard you…';
-  vivaSetListening(true);
-  await vivaSpeak('Mm-hmm, got it.');
-  vivaSetListening(false);
-
-  const verdict = Math.random() < 0.7 ? 'correct' : 'partial';
-  const verdictLine = verdict === 'correct' ? "That's a solid answer." : "That's on the right track.";
-  const nextQuestion = vivaPickSimQuestion(subject);
-  const reply = `So you said: "${lastAnswer}". ${verdictLine} Let's move on — ${nextQuestion}`;
-
-  const lastBubble = document.querySelector('#vivaTranscript .viva-turn.student:last-child .bubble');
-  if(lastBubble) lastBubble.classList.add('verdict-' + verdict);
-
-  vivaAppendTurn('ai', reply);
-  vivaHistory.push({ role:'assistant', content: reply });
-  document.getElementById('vivaStatus').textContent = 'Forge is speaking… (simulated demo)';
-  await vivaSpeak(reply);
-  document.getElementById('vivaStatus').textContent = 'Your turn — click the mic and answer';
-}
-
-document.getElementById('vivaStartBtn').addEventListener('click', async ()=>{
-  vivaHistory = [];
-  vivaSimAsked = new Set();
-  vivaActive = true;
-  document.getElementById('vivaSetup').style.display = 'none';
-  document.getElementById('vivaSession').style.display = 'block';
-  document.getElementById('vivaTranscript').innerHTML = '';
-  document.getElementById('vivaAvatarWrap').innerHTML = vivaAvatarSvg(forgeStore.getItem('forge-viva-avatar') || 'lion');
-  await vivaRequestTurn();
-});
-
-document.getElementById('vivaSubmitBtn').addEventListener('click', async ()=>{
-  if(!vivaActive) return;
-  const field = document.getElementById('vivaAnswerField');
-  const val = field.value.trim();
-  if(!val){ showToast('Speak or type an answer first'); return; }
-  vivaAppendTurn('student', val);
-  vivaHistory.push({ role:'user', content: val });
-  field.value = '';
-  await vivaRequestTurn();
-});
-
-document.getElementById('vivaEndBtn').addEventListener('click', ()=>{
-  vivaActive = false;
-  window.speechSynthesis && window.speechSynthesis.cancel();
-  vivaSetTalking(false);
-  document.getElementById('vivaSession').style.display = 'none';
-  document.getElementById('vivaSetup').style.display = 'block';
-  showToast('Viva ended');
-});
-
-attachMic(document.getElementById('vivaMicBtn'), document.getElementById('vivaAnswerField'));
-const vivaMicBtnEl = document.getElementById('vivaMicBtn');
-new MutationObserver(()=>{
-  vivaSetListening(vivaMicBtnEl.classList.contains('listening'));
-}).observe(vivaMicBtnEl, { attributes: true, attributeFilter: ['class'] });
 </script>
 
 
