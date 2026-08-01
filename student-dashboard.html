@@ -1260,6 +1260,13 @@
     color:var(--ink-soft); margin-bottom:4px; display:block;
   }
   .ai-block .v{ font-size:13.5px; line-height:1.55; }
+  .ai-steps{ font-size:13.5px; line-height:1.55; margin:0; padding-left:18px; }
+  .ai-steps li{ margin-bottom:4px; }
+  .ai-code{
+    background:#1e1c18; color:#eae4d6; font-family:'Space Mono', monospace; font-size:12.5px;
+    line-height:1.5; padding:12px 14px; border-radius:8px; overflow-x:auto; white-space:pre;
+  }
+  .ai-line-by-line{ white-space:pre-line; }
   .ai-fallback{ font-size:13.5px; line-height:1.55; color:var(--ink-soft); font-style:italic; }
 
   /* ---------- ERROR / OFFLINE FACE ---------- */
@@ -2547,6 +2554,14 @@
           <div class="label">Doubts Asked</div>
         </div>
       </div>
+    </section>
+
+    <section class="panel anim" id="aiUsagePanel">
+      <div class="panel-head">
+        <h2>AI Usage</h2>
+        <span class="tt-sub" id="aiUsageTotalNum">0 tokens total</span>
+      </div>
+      <div class="activity-stats" id="aiUsageGrid"></div>
     </section>
 
     <section class="panel anim heatmap-panel">
@@ -4075,6 +4090,29 @@ function appendThinking(tier){
   return el;
 }
 
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+function typeBlockHtml(entry){
+  const type = entry.type || 'concept';
+  if(type === 'numerical'){
+    const steps = Array.isArray(entry.steps) ? entry.steps : [];
+    return `
+      ${entry.formula ? `<div class="ai-block"><span class="k">Formula</span><div class="v">${entry.formula}</div></div>` : ''}
+      ${steps.length ? `<div class="ai-block"><span class="k">Steps</span><ol class="v ai-steps">${steps.map(s=>`<li>${s}</li>`).join('')}</ol></div>` : ''}
+      ${entry.workedExample ? `<div class="ai-block"><span class="k">Worked Example</span><div class="v">${entry.workedExample}</div></div>` : ''}`;
+  }
+  if(type === 'code'){
+    return `
+      ${entry.codeSnippet ? `<div class="ai-block"><span class="k">Code${entry.codeLanguage ? ' · ' + entry.codeLanguage : ''}</span><pre class="ai-code"><code>${escapeHtml(entry.codeSnippet)}</code></pre></div>` : ''}
+      ${entry.commonMistake ? `<div class="ai-block"><span class="k">Common Mistake</span><div class="v">${entry.commonMistake}</div></div>` : ''}`;
+  }
+  return `
+    ${entry.keyConcept ? `<div class="ai-block"><span class="k">Key Concept</span><div class="v">${entry.keyConcept}</div></div>` : ''}
+    ${entry.example ? `<div class="ai-block"><span class="k">Example</span><div class="v">${entry.example}</div></div>` : ''}`;
+}
+
 function renderAIMessage(el, tier, entry, apiFailed, question){
   const badge = tier==='tier2' ? '<span class="tier-badge t2">Tier 2 · Deep</span>' : '<span class="tier-badge t1">Tier 1 · Fast</span>';
   const errorBox = apiFailed ? errorFaceBox(entry ? 'Showing offline content instead.' : 'And no offline match for this either.') : '';
@@ -4084,12 +4122,15 @@ function renderAIMessage(el, tier, entry, apiFailed, question){
       <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
       ${errorBox}
       <div class="ai-block"><span class="k">Explanation</span><div class="v" data-role="explanation-text">${entry.explanation}</div></div>
-      <div class="ai-block"><span class="k">Key Concept</span><div class="v">${entry.keyConcept}</div></div>
-      <div class="ai-block"><span class="k">Example</span><div class="v">${entry.example}</div></div>
+      ${typeBlockHtml(entry)}
       <div class="notes-card-actions">
         ${hasSimple ? `<button class="note-action-btn btn-pop" data-action="toggle-simple">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
           Simpler explanation
+        </button>` : ''}
+        ${entry.type === 'code' && entry.codeSnippet ? `<button class="note-action-btn btn-pop" data-action="explain-lines">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Explain line-by-line
         </button>` : ''}
         <button class="note-action-btn btn-pop" data-action="save-chat-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
@@ -4110,6 +4151,44 @@ function renderAIMessage(el, tier, entry, apiFailed, question){
         showingSimple = !showingSimple;
         el.querySelector('[data-role="explanation-text"]').textContent = showingSimple ? entry.simpleExplanation : entry.explanation;
         simpleBtn.innerHTML = simpleBtn.innerHTML.replace(showingSimple ? 'Simpler explanation' : 'Show detailed', showingSimple ? 'Show detailed' : 'Simpler explanation');
+      });
+    }
+    const explainBtn = el.querySelector('[data-action="explain-lines"]');
+    if(explainBtn){
+      explainBtn.addEventListener('click', async ()=>{
+        explainBtn.disabled = true;
+        explainBtn.innerHTML = explainBtn.innerHTML.replace('Explain line-by-line','Explaining…');
+        try{
+          const codeLines = entry.codeSnippet.split('\n');
+          const nonBlankCount = codeLines.filter(l => l.trim()).length;
+          const numberedCode = codeLines.map((line, i) => `${i + 1}. ${line}`).join('\n');
+          const resp = await fetch('/.netlify/functions/ask-doubt', {
+            method:'POST',
+            headers:{ 'content-type':'application/json' },
+            body: JSON.stringify({
+              question: `Explain this code line-by-line, one output line per numbered code line below, in the simplest possible everyday language a total beginner could follow. For "explanation" output EXACTLY this format, one entry per non-blank line, separated by real newlines, nothing else — no intro, no summary:\nLine <N>: <what this line does, in plain words>\n\nYour output MUST contain exactly ${nonBlankCount} "Line <N>:" entries, covering every non-blank code line below in order, all the way to the last line. Do not stop early and do not summarize instead of finishing.\n\nCode:\n${numberedCode}`,
+              tier: 'tier2', history: []
+            })
+          });
+          const data = resp.ok ? await resp.json() : null;
+          if(data) bumpTokenStat('ask-doubt', data.usage);
+          if(data && data.explanation){
+            const block = document.createElement('div');
+            block.className = 'ai-block';
+            block.innerHTML = `<span class="k">Line-by-Line</span><div class="v ai-line-by-line"></div>`;
+            block.querySelector('.ai-line-by-line').textContent = data.explanation;
+            explainBtn.closest('.notes-card-actions').before(block);
+            explainBtn.remove();
+          } else {
+            showToast('Could not fetch line-by-line explanation');
+            explainBtn.disabled = false;
+            explainBtn.innerHTML = explainBtn.innerHTML.replace('Explaining…','Explain line-by-line');
+          }
+        } catch(e){
+          showToast('Could not fetch line-by-line explanation');
+          explainBtn.disabled = false;
+          explainBtn.innerHTML = explainBtn.innerHTML.replace('Explaining…','Explain line-by-line');
+        }
       });
     }
   } else {
@@ -4165,6 +4244,8 @@ document.getElementById('pendingAttachRemove').addEventListener('click', ()=>{
   document.getElementById('pendingAttachChip').style.display = 'none';
 });
 
+let chatHistory = []; // { role: 'user'|'assistant', content: string }[] — resets on page reload, same as chatWindow
+
 async function sendDoubt(){
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
@@ -4190,12 +4271,13 @@ async function sendDoubt(){
       method:'POST',
       headers:{ 'content-type':'application/json' },
       body: JSON.stringify({
-        question:text, tier,
+        question:text, tier, history: chatHistory,
         attachment: attachment ? { name: attachment.name, type: attachment.type, dataUrl: attachment.dataUrl } : null
       })
     });
     if(resp.ok){
       const data = await resp.json();
+      bumpTokenStat('ask-doubt', data.usage);
       if(data && data.explanation) entry = data;
     } else {
       apiFailed = true;
@@ -4204,6 +4286,10 @@ async function sendDoubt(){
 
   if(!entry) entry = findAnswer(text);
   if(entry) logDoubtHistory(text, entry.subject);
+  if(entry && !apiFailed){
+    chatHistory.push({ role:'user', content:text }, { role:'assistant', content:entry.explanation });
+    chatHistory = chatHistory.slice(-6);
+  }
 
   thinkingEl.removeAttribute('id');
   renderAIMessage(thinkingEl, tier, entry, apiFailed, text);
@@ -4328,6 +4414,12 @@ renderJourneyStrip();
 /* --- Practice activity: seeded historical baseline + live localStorage counts --- */
 function getStat(key){ return parseInt(forgeStore.getItem('forge-stat-' + key) || '0', 10); }
 function bumpStat(key, by){ forgeStore.setItem('forge-stat-' + key, getStat(key) + by); }
+function bumpTokenStat(feature, usage){
+  if(!usage || !usage.total_tokens) return;
+  bumpStat('tokens-' + feature, usage.total_tokens);
+  bumpStat('tokens-total', usage.total_tokens);
+  if(typeof renderAIUsageStats === 'function') renderAIUsageStats();
+}
 
 function renderActivityStats(){
   const quizzes = getStat('quizzes');
@@ -4341,6 +4433,28 @@ function renderActivityStats(){
   document.getElementById('activityDoubtsNum').textContent = doubts;
 }
 renderActivityStats();
+
+/* --- AI Usage: live per-feature token counts, real data from every Groq call this session --- */
+const AI_FEATURES = [
+  { key:'ask-doubt', label:'Ask Forge (Doubts)' },
+  { key:'generate-note', label:'Notes Generated' },
+  { key:'assignment-tip', label:'Assignment Priority' },
+  { key:'strategy-tip', label:'Strategy Tips' },
+  { key:'grade-answer', label:'Quiz Grading' },
+  { key:'viva-turn', label:'Viva Prep' }
+];
+function renderAIUsageStats(){
+  const grid = document.getElementById('aiUsageGrid');
+  grid.innerHTML = AI_FEATURES.map((f, i) => `
+    <div class="stat-card c${(i % 4) + 1}">
+      <div>
+        <div class="num">${getStat('tokens-' + f.key).toLocaleString()}</div>
+        <div class="label">${f.label}</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('aiUsageTotalNum').textContent = getStat('tokens-total').toLocaleString() + ' tokens total';
+}
+renderAIUsageStats();
 
 /* --- Exam history --- */
 const EXAM_HISTORY = [];
@@ -4861,6 +4975,7 @@ async function askAssignmentPriority(){
     });
     if(resp.ok){
       const data = await resp.json();
+      bumpTokenStat('assignment-tip', data.usage);
       if(data && data.tip) tip = data.tip;
     } else { apiFailed = true; }
   } catch(e){ apiFailed = true; }
@@ -5070,7 +5185,7 @@ async function askWeeklyStrategy(){
         assignments: getAssignments().map(x=>({ title:x.title, subject:x.subject, dueDate:x.dueDate }))
       })
     });
-    if(resp.ok){ const data = await resp.json(); if(data && data.tip) tip = data.tip; }
+    if(resp.ok){ const data = await resp.json(); bumpTokenStat('strategy-tip', data.usage); if(data && data.tip) tip = data.tip; }
   } catch(e){}
   area.innerHTML = tip
     ? `<div class="assignment-tip-box"><b>💡 Forge's take:</b> ${tip}</div>`
@@ -5092,7 +5207,7 @@ async function askBacklogTip(id){
       headers:{ 'content-type':'application/json' },
       body: JSON.stringify({ mode:'backlog', backlogSubject: backlog.subject, attempt: backlog.attempt, examDate: backlog.examDate })
     });
-    if(resp.ok){ const data = await resp.json(); if(data && data.tip) tip = data.tip; }
+    if(resp.ok){ const data = await resp.json(); bumpTokenStat('strategy-tip', data.usage); if(data && data.tip) tip = data.tip; }
   } catch(e){}
   area.innerHTML = tip
     ? `<b>💡 Forge's take:</b> ${tip}`
@@ -5560,6 +5675,7 @@ async function generateNotes(topic){
     });
     if(resp.ok){
       const data = await resp.json();
+      bumpTokenStat('generate-note', data.usage);
       if(data && data.title) entry = data;
     } else {
       apiFailed = true;
@@ -6038,6 +6154,7 @@ async function checkWrittenAnswer(kind){
     });
     if(resp.ok){
       const data = await resp.json();
+      bumpTokenStat('grade-answer', data.usage);
       if(data && data.verdict) result = data;
     }
   } catch(e){ /* offline, or no Netlify function server (e.g. opened via file://) */ }
@@ -6387,6 +6504,7 @@ async function vivaRequestTurn(){
     });
     if(!resp.ok) throw new Error('bad response');
     const data = await resp.json();
+    bumpTokenStat('viva-turn', data.usage);
     if(!data || !data.reply) throw new Error('empty reply');
 
     if(data.verdict && vivaHistory.length){

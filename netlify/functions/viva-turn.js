@@ -1,4 +1,4 @@
-// Netlify serverless function — keeps the OpenRouter API key server-side.
+// Netlify serverless function — keeps the Groq API key server-side.
 // The frontend calls POST /.netlify/functions/viva-turn with { subject, history }
 // and never sees the key. Drives the Viva Prep feature: an AI oral examiner that
 // asks a question, grades the student's spoken (transcribed) answer, and asks a
@@ -6,7 +6,7 @@
 // other Forge functions (ask-doubt.js, grade-answer.js).
 
 const MODEL_BY_TIER = {
-  tier1: 'x-ai/grok-4.3'
+  tier1: 'llama-3.3-70b-versatile'
 };
 
 exports.handler = async function(event){
@@ -14,9 +14,9 @@ exports.handler = async function(event){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if(!apiKey){
-    return { statusCode: 500, body: JSON.stringify({ error: 'OPENROUTER_API_KEY not configured on the server' }) };
+    return { statusCode: 500, body: JSON.stringify({ error: 'GROQ_API_KEY not configured on the server' }) };
   }
 
   let subject, history;
@@ -57,7 +57,7 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
   opening question, when there is no previous answer yet to grade.`;
 
   try{
-    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'authorization': `Bearer ${apiKey}`,
@@ -66,6 +66,7 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
       body: JSON.stringify({
         model: MODEL_BY_TIER.tier1,
         max_tokens: 400,
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
           ...(isOpening ? [{ role: 'user', content: 'Begin the viva.' }] : cappedHistory)
@@ -76,9 +77,11 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
     const data = await resp.json();
 
     if(!resp.ok){
-      const message = (data && data.error && data.error.message) || 'OpenRouter API error';
+      const message = (data && data.error && data.error.message) || 'Groq API error';
       return { statusCode: resp.status, body: JSON.stringify({ error: message }) };
     }
+
+    if(data.usage) console.log('[viva-turn] tokens:', data.usage);
 
     const raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
     let parsed;
@@ -92,8 +95,9 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
       return { statusCode: 502, body: JSON.stringify({ error: 'Model returned an empty reply' }) };
     }
 
+    parsed.usage = data.usage || null;
     return { statusCode: 200, body: JSON.stringify(parsed) };
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach OpenRouter API: ' + e.message }) };
+    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
   }
 };

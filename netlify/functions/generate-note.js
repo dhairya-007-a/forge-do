@@ -1,11 +1,10 @@
-// Netlify serverless function — keeps the OpenRouter API key server-side.
+// Netlify serverless function — keeps the Groq API key server-side.
 // The frontend calls POST /.netlify/functions/generate-note with { topic, tier }
 // and never sees the key.
-// TEMP: using OpenRouter (Grok) instead of Anthropic for testing while the Anthropic account has $0 credit.
 
 const MODEL_BY_TIER = {
-  tier1: 'x-ai/grok-4.3',
-  tier2: 'x-ai/grok-4.5'
+  tier1: 'llama-3.3-70b-versatile',
+  tier2: 'llama-3.3-70b-versatile'
 };
 
 exports.handler = async function(event){
@@ -13,9 +12,9 @@ exports.handler = async function(event){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if(!apiKey){
-    return { statusCode: 500, body: JSON.stringify({ error: 'OPENROUTER_API_KEY not configured on the server' }) };
+    return { statusCode: 500, body: JSON.stringify({ error: 'GROQ_API_KEY not configured on the server' }) };
   }
 
   let topic, tier;
@@ -54,7 +53,7 @@ respond with:
 {"title": null, "sections": []}`;
 
   try{
-    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'authorization': `Bearer ${apiKey}`,
@@ -63,6 +62,7 @@ respond with:
       body: JSON.stringify({
         model: MODEL_BY_TIER[tier],
         max_tokens: 700,
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: topic }
@@ -73,9 +73,11 @@ respond with:
     const data = await resp.json();
 
     if(!resp.ok){
-      const message = (data && data.error && data.error.message) || 'OpenRouter API error';
+      const message = (data && data.error && data.error.message) || 'Groq API error';
       return { statusCode: resp.status, body: JSON.stringify({ error: message }) };
     }
+
+    if(data.usage) console.log('[generate-note] tokens:', data.usage);
 
     const raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
     let parsed;
@@ -86,11 +88,12 @@ respond with:
     }
 
     if(!parsed.title || !Array.isArray(parsed.sections) || !parsed.sections.length){
-      return { statusCode: 200, body: JSON.stringify({ title: null, sections: [] }) };
+      return { statusCode: 200, body: JSON.stringify({ title: null, sections: [], usage: data.usage || null }) };
     }
 
+    parsed.usage = data.usage || null;
     return { statusCode: 200, body: JSON.stringify(parsed) };
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach OpenRouter API: ' + e.message }) };
+    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
   }
 };
