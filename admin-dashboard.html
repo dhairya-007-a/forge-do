@@ -196,6 +196,16 @@
   <section class="panel">
     <div class="panel-head">
       <div>
+        <h2>AI Usage &amp; Cost</h2>
+        <p id="aiUsageTotalNum">0 tokens total</p>
+      </div>
+    </div>
+    <div class="stat-row" id="aiUsageGrid"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
         <h2>Notes</h2>
       </div>
     </div>
@@ -215,6 +225,24 @@ const SUBJECTS = [
 ];
 
 function getStat(key){ return parseInt(localStorage.getItem('forge-stat-' + key) || '0', 10); }
+
+const AI_FEATURES = [
+  { key:'ask-doubt', label:'Ask Forge (Doubts)' },
+  { key:'generate-note', label:'Notes Generated' },
+  { key:'assignment-tip', label:'Assignment Priority' },
+  { key:'strategy-tip', label:'Strategy Tips' },
+  { key:'grade-answer', label:'Quiz Grading' },
+  { key:'viva-turn', label:'Viva Prep' },
+  { key:'find-videos', label:'Video Finder' }
+];
+function renderAIUsageStats(){
+  document.getElementById('aiUsageGrid').innerHTML = AI_FEATURES.map(f => `
+    <div class="stat-card">
+      <div class="num">${getStat('tokens-' + f.key).toLocaleString()}</div>
+      <div class="label">${f.label}</div>
+    </div>`).join('');
+  document.getElementById('aiUsageTotalNum').textContent = getStat('tokens-total').toLocaleString() + ' tokens total';
+}
 
 function renderStats(){
   const quizzes = getStat('quizzes');
@@ -274,6 +302,7 @@ function showAdmin(){
   document.getElementById('adminGate').style.display = 'block';
   renderStats();
   renderSubjects();
+  renderAIUsageStats();
 }
 if(sessionStorage.getItem('forge-admin-auth') === 'true'){
   showAdmin();
