@@ -4302,6 +4302,21 @@ function typeBlockHtml(entry){
 function renderAIMessage(el, tier, entry, apiFailed, question){
   const badge = tier==='tier2' ? '<span class="tier-badge t2">Tier 2 · Deep</span>' : '<span class="tier-badge t1">Tier 1 · Fast</span>';
   const errorBox = apiFailed ? errorFaceBox(entry ? 'Showing offline content instead.' : 'And no offline match for this either.') : '';
+
+  if(entry && entry.type === 'course'){
+    el.querySelector('.ai-card').innerHTML = `
+      <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
+      ${errorBox}
+      <div class="ai-block"><span class="k">${escapeHtml(entry.subject || 'Course Overview')}</span><div class="v">${escapeHtml(entry.explanation)}</div></div>
+      <div class="ai-block"><span class="k">Main Topics</span><div class="v"><ol class="ai-steps">${(entry.mainTopics || []).map(t => `<li><b>${escapeHtml(t.chapter)}</b> — ${escapeHtml(t.why)}</li>`).join('')}</ol></div></div>
+      <div class="ai-block"><span class="k">Practice Questions</span><div class="v course-quiz-list">${(entry.practiceQuestions || []).map((q, i) => `<button class="note-action-btn btn-pop course-quiz-q" data-subject="${escapeHtml(entry.subject || '')}" data-chapter="${escapeHtml((entry.mainTopics && entry.mainTopics[i % Math.max(entry.mainTopics.length,1)] && entry.mainTopics[i % Math.max(entry.mainTopics.length,1)].chapter) || '')}" data-question="${escapeHtml(q)}">${escapeHtml(q)}</button>`).join('')}</div></div>`;
+    el.querySelectorAll('.course-quiz-q').forEach(btn=>{
+      btn.addEventListener('click', ()=> startCourseQuizFromCard(btn.dataset.subject, btn.dataset.chapter, btn.dataset.question));
+    });
+    document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
+    return;
+  }
+
   if(entry){
     const hasSimple = !!entry.simpleExplanation;
     el.querySelector('.ai-card').innerHTML = `
@@ -4570,6 +4585,21 @@ async function submitChatQuizAnswer(answerText){
       <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
       <div class="ai-fallback">Couldn't reach Forge to grade that — try again in a moment.</div>`;
   }
+  document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
+}
+
+// Tapping a practice question from a course-mode card seeds the exact same
+// awaitingQuizAnswer flow conversational quizzing already uses — no separate
+// grading path needed, submitChatQuizAnswer() handles the rest.
+function startCourseQuizFromCard(subject, chapter, question){
+  appendUserMessage('Quiz me: ' + question, null);
+  const thinkingEl = appendThinking('tier1');
+  thinkingEl.removeAttribute('id');
+  awaitingQuizAnswer = { subject, chapter, question };
+  thinkingEl.querySelector('.ai-card').innerHTML = `
+    <div class="ai-card-head"><span class="who">Forge</span><span class="tier-badge t1">Tier 1 · Fast</span></div>
+    <div class="ai-block"><span class="k">Quiz</span><div class="v">${escapeHtml(question)}</div></div>
+    <div class="tt-sub">Type your answer below and send it.</div>`;
   document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
 }
 
