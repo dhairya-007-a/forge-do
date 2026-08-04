@@ -11,6 +11,37 @@ const MODEL_BY_TIER = {
   tier2: 'llama-3.3-70b-versatile'
 };
 
+// The model doesn't always follow the exact subject naming in the prompt (it sometimes
+// reverts to the official long-form course names). Normalize to the short names used
+// everywhere else in the app (COURSE_CHAPTERS, CHAPTER_KEYWORDS, MCQ_QUESTIONS, the
+// subject dropdown) so subject-string matching downstream — e.g. the readiness engine's
+// chapter lookup — doesn't silently fail on a naming mismatch.
+const SUBJECT_ALIASES = {
+  'Introduction to Data Structures and Algorithms': 'Data Structures and Algorithms',
+  'Introduction to Database Management System': 'Database Management System',
+  'Introduction to Object Oriented Programming': 'Object Oriented Programming',
+  'Business Ethics and Intellectual Property Rights': 'Business Ethics and IPR'
+};
+function normalizeSubject(subject){
+  return SUBJECT_ALIASES[subject] || subject;
+}
+
+// Mirrors COURSE_CHAPTERS in student-dashboard.html — kept in sync manually since this is a
+// static site with no shared module system. Used to (a) tell the model the real chapter names
+// per subject so it can classify a doubt directly, and (b) validate its answer server-side
+// rather than trusting it blindly (the model doesn't always follow instructions exactly).
+const COURSE_CHAPTERS = {
+  'Data Structures and Algorithms': ['Arrays & Complexity Analysis','Stacks','Queues','Linked Lists','Trees & Binary Search Trees','Graphs','Sorting Algorithms','Hashing','Heaps','Dynamic Programming'],
+  'Database Management System': ['Introduction to DBMS & File Systems','ER Model & Relational Model','Relational Algebra & SQL Basics','Advanced SQL (Joins, Subqueries, Views)','Normalization (1NF–BCNF)','Transactions & Concurrency Control','Indexing & Query Processing','NoSQL & Modern Databases Intro'],
+  'Object Oriented Programming': ['OOP Concepts: Classes & Objects','Constructors & Destructors','Inheritance','Polymorphism (Overloading & Overriding)','Abstract Classes & Interfaces','Exception Handling','File Handling & I/O','Collections & Generics'],
+  'Digital Electronics': ['Number Systems & Codes','Boolean Algebra & Logic Gates','Combinational Circuits (Adders, MUX, Decoders)','Karnaugh Maps & Minimization','Sequential Circuits (Flip-Flops, Latches)','Counters & Registers','Memory Devices (RAM/ROM)','A/D and D/A Converters Intro'],
+  'Discrete Mathematics': ['Set Theory & Relations','Propositional & Predicate Logic','Functions','Combinatorics (Permutations & Combinations)','Graph Theory Basics','Trees (Graph-Theoretic)','Recurrence Relations','Group Theory & Algebraic Structures Intro'],
+  'Business Ethics and IPR': ['Introduction to Business Ethics','Corporate Social Responsibility','Ethical Decision-Making Frameworks','Introduction to IP: Patents, Copyrights, Trademarks','Patent Filing Process','Copyright & Trade Secrets','IPR in the IT & Software Industry','Case Studies & Emerging Issues']
+};
+function chapterListText(){
+  return Object.entries(COURSE_CHAPTERS).map(([subject, chapters]) => `${subject}: ${chapters.join(', ')}`).join('\n');
+}
+
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
@@ -42,8 +73,8 @@ exports.handler = async function(event){
     .slice(-6);
 
   const systemPrompt = `You are Forge, an academic doubt-solving assistant for a B.Tech Computer Engineering (Semester 3) student.
-Subjects this semester: Introduction to Data Structures and Algorithms, Introduction to Database Management System,
-Introduction to Object Oriented Programming, Digital Electronics, Discrete Mathematics, Business Ethics and Intellectual Property Rights.
+Subjects this semester: Data Structures and Algorithms, Database Management System,
+Object Oriented Programming, Digital Electronics, Discrete Mathematics, Business Ethics and IPR.
 
 Explain concepts in simple, everyday language. Use real-life analogies and examples wherever possible
 (relate the concept to something from daily life). Avoid dense textbook jargon unless the technical term
@@ -57,20 +88,32 @@ If an image or file is attached, read its actual content (handwritten/printed no
 diagram, a PDF) and ground your answer in what it actually shows — quote or describe the relevant part of it
 rather than answering generically.
 
-Every question is one of three types — pick whichever fits best:
+Every question is one of four types — pick whichever fits best:
 - "concept": a definition, theory, or "what/why/how does X work" question.
 - "numerical": a question that involves a calculation, formula, or worked math/logic problem
   (e.g. normalization steps, K-map, Boolean algebra simplification, complexity computation).
 - "code": a question about syntax, an algorithm's implementation, or "how do I write/code X".
+- "course": the student wants to learn or study a whole subject/topic broadly, not resolve one
+  specific doubt — e.g. "teach me DBMS", "give me a course on trees", "help me learn OOP",
+  "overview of digital electronics".
+
+Each subject has these chapters — once you've picked the subject, also pick exactly ONE chapter from
+that subject's list that this question belongs to:
+${chapterListText()}
 
 Given a student's doubt/question, respond with ONLY valid JSON, no markdown fences, no commentary, in
 exactly this shape:
-{"subject": "string", "type": "concept" | "numerical" | "code", "explanation": "string", "simpleExplanation": "string",
+{"subject": "string", "chapter": "string|null", "type": "concept" | "numerical" | "code" | "course", "explanation": "string", "simpleExplanation": "string",
  "keyConcept": "string|null", "example": "string|null",
  "formula": "string|null", "steps": "string[]|null", "workedExample": "string|null",
- "codeSnippet": "string|null", "codeLanguage": "string|null", "commonMistake": "string|null"}
+ "codeSnippet": "string|null", "codeLanguage": "string|null", "commonMistake": "string|null",
+ "mainTopics": [{"chapter": "string", "why": "string"}]|null, "practiceQuestions": "string[]|null"}
 - "subject" must be one of the 6 subject names above (pick the closest match).
-- "explanation": a clear, complete answer to the question, for every type.
+- "chapter" must be copied EXACTLY (character-for-character) from that subject's chapter list above —
+  do not paraphrase or shorten it. For "course" type, set "chapter" to null — a whole-course
+  request doesn't belong to one chapter.
+- "explanation": a clear, complete answer to the question, for every type. For "course" type, one
+  short sentence introducing the course (e.g. "Here's your course overview for Database Management System.").
 - "simpleExplanation": a genuinely simpler restatement, for every type. Hard requirements:
   - Maximum 2 sentences, and it must be shorter than "explanation".
   - Zero technical/subject jargon — not even terms already used in "explanation" (no "dependency",
@@ -84,10 +127,14 @@ exactly this shape:
     and "workedExample" (a fully worked example with numbers).
   - "code": fill "codeSnippet" (the actual code), "codeLanguage" (e.g. "c", "python", "sql"), and
     "commonMistake" (a mistake students typically make with this).
+  - "course": fill "mainTopics" (5-8 entries, "chapter" copied EXACTLY from that subject's chapter
+    list, ordered by importance, "why" a one-line reason it matters) and "practiceQuestions"
+    (3-5 short-answer questions covering those topics).
 If the question is unrelated to college coursework, or you are not confident in a grounded answer,
 respond with:
-{"subject": null, "type": null, "explanation": null, "simpleExplanation": null, "keyConcept": null, "example": null,
- "formula": null, "steps": null, "workedExample": null, "codeSnippet": null, "codeLanguage": null, "commonMistake": null}`;
+{"subject": null, "chapter": null, "type": null, "explanation": null, "simpleExplanation": null, "keyConcept": null, "example": null,
+ "formula": null, "steps": null, "workedExample": null, "codeSnippet": null, "codeLanguage": null, "commonMistake": null,
+ "mainTopics": null, "practiceQuestions": null}`;
 
   const userContent = [{ type: 'text', text: question }];
   if(attachment){
@@ -133,11 +180,32 @@ respond with:
     } catch(e){
       return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
     }
+    if(parsed.subject) parsed.subject = normalizeSubject(parsed.subject);
+    // Don't trust the chapter name blindly — only keep it if it's an exact match for the
+    // subject it claims to belong to, otherwise the frontend falls back to keyword matching.
+    const validChapters = COURSE_CHAPTERS[parsed.subject] || [];
+    if(!validChapters.includes(parsed.chapter)) parsed.chapter = null;
+
+    // Same defense-in-depth for course-mode's topic list — drop any entry whose chapter name
+    // isn't an exact match, same rule as the single "chapter" field above.
+    if(parsed.type === 'course' && Array.isArray(parsed.mainTopics)){
+      parsed.mainTopics = parsed.mainTopics
+        .filter(t => t && typeof t.chapter === 'string' && validChapters.includes(t.chapter) && typeof t.why === 'string')
+        .slice(0, 8);
+    } else {
+      parsed.mainTopics = null;
+    }
+    if(parsed.type === 'course' && Array.isArray(parsed.practiceQuestions)){
+      parsed.practiceQuestions = parsed.practiceQuestions.filter(q => typeof q === 'string' && q.trim()).slice(0, 5);
+    } else {
+      parsed.practiceQuestions = null;
+    }
 
     if(!parsed.explanation){
       return { statusCode: 200, body: JSON.stringify({
-        subject: null, type: null, explanation: null, simpleExplanation: null, keyConcept: null, example: null,
-        formula: null, steps: null, workedExample: null, codeSnippet: null, codeLanguage: null, commonMistake: null
+        subject: null, chapter: null, type: null, explanation: null, simpleExplanation: null, keyConcept: null, example: null,
+        formula: null, steps: null, workedExample: null, codeSnippet: null, codeLanguage: null, commonMistake: null,
+        mainTopics: null, practiceQuestions: null
       }) };
     }
 
