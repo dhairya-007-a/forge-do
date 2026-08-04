@@ -4927,6 +4927,7 @@ async function loadTopicVideos(subject, chapter){
       body: JSON.stringify({ subject, chapter })
     });
     const data = resp.ok ? await resp.json() : null;
+    if(data) bumpTokenStat('find-videos', data.usage);
     if(!data || data.error || !data.videos.length){
       el.innerHTML = '<p class="tt-sub">Couldn\'t load videos for this topic right now.</p>';
       return;

@@ -31,6 +31,7 @@ exports.handler = async function(event){
   // Default query is a safe fallback if the Groq call below fails for any reason —
   // the feature should still work, just with a slightly worse search phrase.
   let query = `${chapter} ${subject} explained`;
+  let groqUsage = null;
   try{
     const phraseResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -45,39 +46,62 @@ exports.handler = async function(event){
       })
     });
     const phraseData = await phraseResp.json();
-    if(phraseData.usage) console.log('[find-videos] groq tokens:', phraseData.usage);
+    if(phraseData.usage){ console.log('[find-videos] groq tokens:', phraseData.usage); groqUsage = phraseData.usage; }
     const text = phraseData.choices && phraseData.choices[0] && phraseData.choices[0].message && phraseData.choices[0].message.content;
     if(text && text.trim()) query = text.trim();
   } catch(e){ /* keep the fallback query built above */ }
 
+  // relevanceLanguage biases YouTube's ranking toward English results — a hint, not a hard
+  // filter (YouTube's search API has no hard language filter). The hard filter below excludes
+  // Tamil/Kannada results the student doesn't want, via two signals: the declared metadata
+  // language (defaultAudioLanguage/defaultLanguage — often unset, so not relied on alone) AND
+  // the title/channel text itself (Unicode script range + the language name spelled out) —
+  // channels rarely set the metadata field but almost always say "in Tamil" or use Tamil/Kannada
+  // script in the title or channel name.
+  const BLOCKED_LANGS = ['ta', 'kn'];
+  const BLOCKED_SCRIPT = /[஀-௿ಀ-೿]/; // Tamil, Kannada Unicode blocks
+  const BLOCKED_WORDS = /\b(tamil|kannada)\b/i;
+  const looksBlocked = text => BLOCKED_SCRIPT.test(text) || BLOCKED_WORDS.test(text);
   try{
-    const searchResp = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q=${encodeURIComponent(query)}&key=${ytKey}`);
+    const searchResp = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&relevanceLanguage=en&q=${encodeURIComponent(query)}&key=${ytKey}`);
     const searchData = await searchResp.json();
     if(!searchResp.ok){
       const message = (searchData && searchData.error && searchData.error.message) || 'YouTube API error';
       return { statusCode: searchResp.status, body: JSON.stringify({ videos: [], bestVideoId: null, error: message }) };
     }
-    const items = Array.isArray(searchData.items) ? searchData.items : [];
+    let items = Array.isArray(searchData.items) ? searchData.items : [];
     if(!items.length){
-      return { statusCode: 200, body: JSON.stringify({ videos: [], bestVideoId: null, error: null }) };
+      return { statusCode: 200, body: JSON.stringify({ videos: [], bestVideoId: null, error: null, usage: groqUsage }) };
     }
 
     const ids = items.map(it => it.id.videoId).join(',');
-    const statsResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${ids}&key=${ytKey}`);
+    const statsResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids}&key=${ytKey}`);
     const statsData = await statsResp.json();
-    const viewsById = {};
-    (statsData.items || []).forEach(v => { viewsById[v.id] = parseInt(v.statistics.viewCount, 10) || 0; });
+    const statsById = {};
+    (statsData.items || []).forEach(v => { statsById[v.id] = v; });
+
+    items = items.filter(it => {
+      const stats = statsById[it.id.videoId];
+      const lang = stats && stats.snippet && (stats.snippet.defaultAudioLanguage || stats.snippet.defaultLanguage);
+      if(lang && BLOCKED_LANGS.some(blocked => lang.toLowerCase().startsWith(blocked))) return false;
+      if(looksBlocked(it.snippet.title) || looksBlocked(it.snippet.channelTitle)) return false;
+      return true;
+    }).slice(0, 5);
+
+    if(!items.length){
+      return { statusCode: 200, body: JSON.stringify({ videos: [], bestVideoId: null, error: null, usage: groqUsage }) };
+    }
 
     const videos = items.map(it => ({
       videoId: it.id.videoId,
       title: it.snippet.title,
       channelTitle: it.snippet.channelTitle,
       thumbnail: it.snippet.thumbnails.medium ? it.snippet.thumbnails.medium.url : it.snippet.thumbnails.default.url,
-      viewCount: viewsById[it.id.videoId] || 0
+      viewCount: parseInt(((statsById[it.id.videoId] || {}).statistics || {}).viewCount, 10) || 0
     }));
     const bestVideoId = videos.reduce((best, v) => v.viewCount > best.viewCount ? v : best, videos[0]).videoId;
 
-    return { statusCode: 200, body: JSON.stringify({ videos, bestVideoId, error: null }) };
+    return { statusCode: 200, body: JSON.stringify({ videos, bestVideoId, error: null, usage: groqUsage }) };
   } catch(e){
     return { statusCode: 502, body: JSON.stringify({ videos: [], bestVideoId: null, error: 'Failed to reach YouTube API: ' + e.message }) };
   }
