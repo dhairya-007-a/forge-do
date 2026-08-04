@@ -19,6 +19,8 @@
     --blue-soft:#E7E4FB;
     --green:#D6DC82;
     --green-soft:#F1F3DE;
+    --wave5:#D98A3D;
+    --wave6:#4FA8A0;
     --ink:#262528;
     --ink-soft:#726D74;
     --white:#FFFFFF;
@@ -41,6 +43,8 @@
     --blue-soft:#292541;
     --green:#B9C46E;
     --green-soft:#262A1E;
+    --wave5:#E2A055;
+    --wave6:#4FB8AE;
     --shadow: 0 10px 30px -12px rgba(0,0,0,0.55);
   }
   /* ---------- JARVIS THEME (Stark-tech HUD) ---------- */
@@ -58,6 +62,8 @@
     --blue-soft:#0E1F2E;
     --green:#39FF88;
     --green-soft:#0D2A1C;
+    --wave5:#C13BFF;
+    --wave6:#FFB800;
     --radius-lg:18px;
     --radius-md:12px;
     --radius-sm:10px;
@@ -245,6 +251,8 @@
     --blue-soft:#D6E4FF;
     --green:#06D6A0;
     --green-soft:#CFF6E7;
+    --wave5:#8B5CF6;
+    --wave6:#FF8A3D;
     --ink:#111111;
     --ink-soft:#4A4A4A;
     --white:#FFFFFF;
@@ -1464,7 +1472,7 @@
   .wave-legend .swatch{ width:16px; height:2px; border-radius:2px; }
   .wave-chart-wrap{ overflow-x:auto; }
   #waveChart{ width:100%; height:220px; display:block; min-width:520px; }
-  .wave-line{ fill:none; stroke-width:2.5px; }
+  .wave-line{ fill:none; stroke-width:2.5px; stroke-linecap:round; }
   .wave-dot{ cursor:pointer; }
   .wave-endlabel{ font-family:'Space Mono'; font-size:10px; font-weight:700; }
   .wave-gridline{ stroke:rgba(36,31,24,0.08); stroke-width:1; }
@@ -1914,6 +1922,37 @@
   }
 
 
+
+  /* ================= TOPIC STUDY MODAL ================= */
+  .topic-modal-backdrop{
+    position:fixed; inset:0; background:rgba(20,18,15,0.45); z-index:340;
+    opacity:0; pointer-events:none; transition:opacity .3s ease;
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  }
+  .topic-modal{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-48%);
+    width:min(560px, 92vw); max-height:82dvh; overflow-y:auto;
+    z-index:350; opacity:0; pointer-events:none;
+    transition:opacity .28s ease, transform .28s cubic-bezier(.22,.9,.3,1);
+  }
+  body.topic-modal-open .topic-modal-backdrop{ opacity:1; pointer-events:auto; }
+  body.topic-modal-open .topic-modal{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%); }
+  :root[data-theme="jarvis"] .topic-modal{ position:fixed; }
+  .topic-modal-status-chip{
+    display:inline-block; font-size:11px; font-weight:700; padding:4px 10px; border-radius:100px;
+    margin-bottom:14px; text-transform:uppercase;
+  }
+  .topic-modal-status-chip.strong{ background:var(--green-soft); color:#3F4A1A; }
+  .topic-modal-status-chip.weak{ background:var(--pink-soft); color:#9C3A48; }
+  .topic-modal-status-chip.learning{ background:var(--blue-soft); }
+  .topic-modal-status-chip.upcoming{ background:var(--yellow-soft); }
+  .topic-video-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; margin-bottom:18px; }
+  .topic-video-card{ border-radius:10px; overflow:hidden; cursor:pointer; border:2px solid transparent; text-decoration:none; color:inherit; display:block; }
+  .topic-video-card.best{ border-color:var(--green); }
+  .topic-video-card img{ width:100%; display:block; aspect-ratio:16/9; object-fit:cover; }
+  .topic-video-card .tv-title{ font-size:11px; font-weight:600; padding:6px 8px 2px; line-height:1.3; }
+  .topic-video-card .tv-meta{ font-size:10px; color:var(--ink-soft); padding:0 8px 8px; }
+  .topic-activity-row{ font-size:12px; color:var(--ink-soft); padding:6px 0; border-top:1px solid rgba(36,31,24,0.06); }
 
   /* ================= "MORE" BOTTOM SHEET ================= */
   .more-sheet-backdrop{
@@ -2556,14 +2595,6 @@
       </div>
     </section>
 
-    <section class="panel anim" id="aiUsagePanel">
-      <div class="panel-head">
-        <h2>AI Usage</h2>
-        <span class="tt-sub" id="aiUsageTotalNum">0 tokens total</span>
-      </div>
-      <div class="activity-stats" id="aiUsageGrid"></div>
-    </section>
-
     <section class="panel anim heatmap-panel">
       <div class="panel-head">
         <h2>Study Activity</h2>
@@ -2603,6 +2634,21 @@
     <div class="filter-row">
       <h2 style="font-size:22px; font-weight:600;">Exam Readiness</h2>
     </div>
+
+    <section class="panel anim" id="readinessCheckPanel">
+      <div class="panel-head">
+        <div>
+          <h2>Am I Ready?</h2>
+          <p class="tt-sub">Combines your real study history with a fresh 5-question diagnostic, right now</p>
+        </div>
+      </div>
+      <div id="rcIdle">
+        <button class="note-action-btn btn-pop" id="rcStartBtn">🎯 Take Readiness Check</button>
+      </div>
+      <div id="rcQuizArea" style="display:none;"></div>
+      <div id="rcVerdictArea" style="display:none;"></div>
+    </section>
+
     <section class="panel anim">
       <div class="panel-head">
         <div>
@@ -2905,6 +2951,9 @@
         <input type="file" id="chatFileInput" accept="image/*,application/pdf" style="display:none;">
         <button class="chat-send-btn attach-btn" id="chatAttachBtn" title="Attach an image or PDF" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <button class="chat-send-btn attach-btn" id="chatQuizMeBtn" title="Quiz me on this subject" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
         <div class="jsfx-input-wrap">
           <svg class="jsfx-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="22" y1="22" x2="16.65" y2="16.65"/></svg>
@@ -3265,6 +3314,43 @@
       <div id="weeklyTipArea"></div>
       <div class="notes-card-actions" style="border-top:none; margin-top:14px; padding-top:0;">
         <button class="note-action-btn btn-pop" id="weeklyTipBtn">💡 Ask Forge what to focus on this week</button>
+      </div>
+    </section>
+
+    <section class="panel anim">
+      <div class="panel-head">
+        <div>
+          <h2>Study Plan</h2>
+          <p class="tt-sub">Priority order is computed from your real quiz/doubt activity — the plan just writes it up</p>
+        </div>
+      </div>
+      <div class="quickadd-row" style="margin-bottom:14px;">
+        <button class="note-action-btn btn-pop" id="spModeSingleBtn">Single Subject</button>
+        <button class="note-action-btn btn-pop" id="spModeAllBtn">All Subjects</button>
+      </div>
+
+      <div id="spSingleMode">
+        <div class="quickadd-row">
+          <select id="spSubjectInput">
+            <option value="Data Structures and Algorithms">Data Structures and Algorithms</option>
+            <option value="Database Management System">Database Management System</option>
+            <option value="Object Oriented Programming">Object Oriented Programming</option>
+            <option value="Digital Electronics">Digital Electronics</option>
+            <option value="Discrete Mathematics">Discrete Mathematics</option>
+            <option value="Business Ethics and IPR">Business Ethics and IPR</option>
+          </select>
+          <input type="date" id="spExamDateInput">
+        </div>
+      </div>
+
+      <div id="spAllMode" style="display:none;">
+        <div id="spAllDatesList"></div>
+      </div>
+
+      <div id="spPriorityList" style="margin-top:14px;"></div>
+      <div id="spPlanArea"></div>
+      <div class="notes-card-actions" style="border-top:none; margin-top:14px; padding-top:0;">
+        <button class="note-action-btn btn-pop" id="spGenerateBtn">📅 Generate Plan</button>
       </div>
     </section>
     </div>
@@ -3645,6 +3731,11 @@ document.querySelectorAll('#sideNav a').forEach(a=>{
       view.classList.add('view-anim');
     }
     document.querySelector('main').scrollTo({top:0, behavior:'smooth'});
+    // Home's readiness ring/bars and the Readiness tab's topic chips/trend chart are only DOM
+    // elements updated in place (no page reload on tab switch) — refresh them on every nav so
+    // they reflect activity logged while the student was on a different tab.
+    renderReadiness(document.getElementById('examSelect').value);
+    if(typeof renderWaveChart === 'function') renderWaveChart();
   });
 });
 
@@ -3841,16 +3932,109 @@ const COURSE_CHAPTERS = {
   'Discrete Mathematics': { current:1, chapters:['Set Theory & Relations','Propositional & Predicate Logic','Functions','Combinatorics (Permutations & Combinations)','Graph Theory Basics','Trees (Graph-Theoretic)','Recurrence Relations','Group Theory & Algebraic Structures Intro'] },
   'Business Ethics and IPR': { current:1, chapters:['Introduction to Business Ethics','Corporate Social Responsibility','Ethical Decision-Making Frameworks','Introduction to IP: Patents, Copyrights, Trademarks','Patent Filing Process','Copyright & Trade Secrets','IPR in the IT & Software Industry','Case Studies & Emerging Issues'] }
 };
+
+// Keyword lists per chapter, reusing the same substring-match pattern as QA_BANK below —
+// lets a freeform Ask Forge doubt be attributed to a chapter for readiness tracking.
+const CHAPTER_KEYWORDS = {
+  'Data Structures and Algorithms': {
+    'Arrays & Complexity Analysis': ['array','complexity','big o','time complexity','space complexity'],
+    'Stacks': ['stack','push','pop','lifo'],
+    'Queues': ['queue','enqueue','dequeue','fifo'],
+    'Linked Lists': ['linked list','node','pointer'],
+    'Trees & Binary Search Trees': ['binary search tree','bst','binary tree','tree traversal'],
+    'Graphs': ['graph','vertex','edge','dfs','bfs'],
+    'Sorting Algorithms': ['sort','quicksort','mergesort','bubble sort','insertion sort'],
+    'Hashing': ['hash','hashing','hash table','collision'],
+    'Heaps': ['heap','priority queue'],
+    'Dynamic Programming': ['dynamic programming',' dp ','memoization']
+  },
+  'Database Management System': {
+    'Introduction to DBMS & File Systems': ['dbms','file system','database basics'],
+    'ER Model & Relational Model': ['er model','entity relationship','relational model','primary key','foreign key','composite key'],
+    'Relational Algebra & SQL Basics': ['relational algebra','sql basics','select statement','drop','delete','truncate'],
+    'Advanced SQL (Joins, Subqueries, Views)': ['join','inner join','left join','subquery','sql view','having'],
+    'Normalization (1NF–BCNF)': ['normalization','1nf','2nf','3nf','bcnf','normal form'],
+    'Transactions & Concurrency Control': ['transaction','acid','concurrency','isolation','commit','rollback'],
+    'Indexing & Query Processing': ['index','indexing','query processing','query optimization'],
+    'NoSQL & Modern Databases Intro': ['nosql','mongodb','document database']
+  },
+  'Object Oriented Programming': {
+    'OOP Concepts: Classes & Objects': ['class','object','this keyword','oop basics'],
+    'Constructors & Destructors': ['constructor','destructor'],
+    'Inheritance': ['inheritance','extends','subclass','parent class','composition'],
+    'Polymorphism (Overloading & Overriding)': ['polymorphism','overload','override'],
+    'Abstract Classes & Interfaces': ['abstract class','interface','abstract method'],
+    'Exception Handling': ['exception','try catch','error handling'],
+    'File Handling & I/O': ['file handling','file io','input output'],
+    'Collections & Generics': ['collection','generic','arraylist']
+  },
+  'Digital Electronics': {
+    'Number Systems & Codes': ['binary number','hexadecimal','octal','number system'],
+    'Boolean Algebra & Logic Gates': ['logic gate','and gate','or gate','nand','boolean algebra'],
+    'Combinational Circuits (Adders, MUX, Decoders)': ['adder','multiplexer','mux','decoder','combinational circuit'],
+    'Karnaugh Maps & Minimization': ['karnaugh map','k-map','minimization'],
+    'Sequential Circuits (Flip-Flops, Latches)': ['flip-flop','flip flop','sequential circuit','latch'],
+    'Counters & Registers': ['counter','register','shift register'],
+    'Memory Devices (RAM/ROM)': ['ram','rom','memory device'],
+    'A/D and D/A Converters Intro': ['adc','dac','analog to digital','digital to analog']
+  },
+  'Discrete Mathematics': {
+    'Set Theory & Relations': ['set theory','subset','relation'],
+    'Propositional & Predicate Logic': ['propositional logic','predicate logic','de morgan'],
+    'Functions': ['function in math','mapping','domain and range'],
+    'Combinatorics (Permutations & Combinations)': ['permutation','combination','npr','ncr'],
+    'Graph Theory Basics': ['graph theory','vertex','edge'],
+    'Trees (Graph-Theoretic)': ['tree in graph','binary tree','graph-theoretic tree'],
+    'Recurrence Relations': ['recurrence relation','recursive formula'],
+    'Group Theory & Algebraic Structures Intro': ['group theory','algebraic structure']
+  },
+  'Business Ethics and IPR': {
+    'Introduction to Business Ethics': ['business ethics','ethics basics'],
+    'Corporate Social Responsibility': ['corporate social responsibility','csr'],
+    'Ethical Decision-Making Frameworks': ['ethical decision','decision-making framework','plagiarism'],
+    'Introduction to IP: Patents, Copyrights, Trademarks': ['intellectual property','ipr basics'],
+    'Patent Filing Process': ['patent','prior art','patent filing'],
+    'Copyright & Trade Secrets': ['copyright','trademark','trade secret'],
+    'IPR in the IT & Software Industry': ['software ipr','it industry ip'],
+    'Case Studies & Emerging Issues': ['case study','emerging issue']
+  }
+};
+function matchChapter(subject, text){
+  const chapters = CHAPTER_KEYWORDS[subject];
+  if(!chapters || !text) return null;
+  const q = text.toLowerCase();
+  for(const chapter in chapters){
+    if(chapters[chapter].some(k => q.includes(k))) return chapter;
+  }
+  return null;
+}
+// generate-note.js doesn't return a subject, only a topic string — search every subject's
+// keyword list to recover both subject and chapter from the topic text alone.
+function matchSubjectAndChapter(text){
+  for(const subject in CHAPTER_KEYWORDS){
+    const chapter = matchChapter(subject, text);
+    if(chapter) return { subject, chapter };
+  }
+  return null;
+}
+
 function initCourseChapters(){
+  const subjectOf = container => container.dataset.chapters;
   document.querySelectorAll('.course-chapters').forEach(container=>{
-    const data = COURSE_CHAPTERS[container.dataset.chapters];
+    const data = COURSE_CHAPTERS[subjectOf(container)];
     if(!data) return;
     container.innerHTML = data.chapters.map((name, idx)=>{
       const num = idx + 1;
       const status = num < data.current ? 'done' : num === data.current ? 'current' : '';
       const check = status === 'done' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' : '';
-      return `<div class="chapter-row ${status}"><span class="chapter-num">${num}</span><span class="chapter-check">${check}</span><span class="chapter-name">${name}</span></div>`;
+      return `<div class="chapter-row ${status}" data-subject="${escapeHtml(subjectOf(container))}" data-chapter="${escapeHtml(name)}"><span class="chapter-num">${num}</span><span class="chapter-check">${check}</span><span class="chapter-name">${name}</span></div>`;
     }).join('');
+    container.querySelectorAll('.chapter-row').forEach(row=>{
+      row.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        openTopicModal(row.dataset.subject, row.dataset.chapter);
+      });
+    });
   });
   document.querySelectorAll('.course-row').forEach(row=>{
     row.addEventListener('click', ()=> row.closest('.course').classList.toggle('expanded'));
@@ -3927,13 +4111,15 @@ function logStudyMinutes(minutes){
   const key = todayKey();
   log[key] = (log[key] || 0) + minutes;
   lsSet('forge-study-log', log);
+  // Heatmap is a DOM snapshot from page load, not reactive — refresh it here (the one place
+  // forge-study-log actually changes) so it never shows stale data mid-session.
+  if(typeof renderHeatmap === 'function') renderHeatmap();
 }
 function handleSessionComplete(){
   stopTicking();
   pomo.running = false;
   if(pomo.mode === 'focus'){
     logStudyMinutes(Math.round(DURATIONS.focus / 60));
-    if(typeof renderHeatmap === 'function') renderHeatmap();
     pomo.sessionCount++;
     pomo.mode = (pomo.sessionCount % 4 === 0) ? 'long' : 'short';
     showToast('Focus session complete — time for a break ☕');
@@ -4065,7 +4251,7 @@ function appendUserMessage(text, attachment){
   const win = document.getElementById('chatWindow');
   const el = document.createElement('div');
   el.className = 'msg user';
-  const chip = attachment ? `<div class="msg-attachment-chip">📎 ${attachment.name} (${formatFileSize(attachment.size)})</div>` : '';
+  const chip = attachment ? `<div class="msg-attachment-chip">📎 ${escapeHtml(attachment.name)} (${formatFileSize(attachment.size)})</div>` : '';
   el.innerHTML = `<div><div class="bubble-user"></div>${chip}</div>`;
   el.querySelector('.bubble-user').textContent = text;
   win.appendChild(el);
@@ -4099,18 +4285,18 @@ function typeBlockHtml(entry){
   if(type === 'numerical'){
     const steps = Array.isArray(entry.steps) ? entry.steps : [];
     return `
-      ${entry.formula ? `<div class="ai-block"><span class="k">Formula</span><div class="v">${entry.formula}</div></div>` : ''}
-      ${steps.length ? `<div class="ai-block"><span class="k">Steps</span><ol class="v ai-steps">${steps.map(s=>`<li>${s}</li>`).join('')}</ol></div>` : ''}
-      ${entry.workedExample ? `<div class="ai-block"><span class="k">Worked Example</span><div class="v">${entry.workedExample}</div></div>` : ''}`;
+      ${entry.formula ? `<div class="ai-block"><span class="k">Formula</span><div class="v">${escapeHtml(entry.formula)}</div></div>` : ''}
+      ${steps.length ? `<div class="ai-block"><span class="k">Steps</span><ol class="v ai-steps">${steps.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ol></div>` : ''}
+      ${entry.workedExample ? `<div class="ai-block"><span class="k">Worked Example</span><div class="v">${escapeHtml(entry.workedExample)}</div></div>` : ''}`;
   }
   if(type === 'code'){
     return `
-      ${entry.codeSnippet ? `<div class="ai-block"><span class="k">Code${entry.codeLanguage ? ' · ' + entry.codeLanguage : ''}</span><pre class="ai-code"><code>${escapeHtml(entry.codeSnippet)}</code></pre></div>` : ''}
-      ${entry.commonMistake ? `<div class="ai-block"><span class="k">Common Mistake</span><div class="v">${entry.commonMistake}</div></div>` : ''}`;
+      ${entry.codeSnippet ? `<div class="ai-block"><span class="k">Code${entry.codeLanguage ? ' · ' + escapeHtml(entry.codeLanguage) : ''}</span><pre class="ai-code"><code>${escapeHtml(entry.codeSnippet)}</code></pre></div>` : ''}
+      ${entry.commonMistake ? `<div class="ai-block"><span class="k">Common Mistake</span><div class="v">${escapeHtml(entry.commonMistake)}</div></div>` : ''}`;
   }
   return `
-    ${entry.keyConcept ? `<div class="ai-block"><span class="k">Key Concept</span><div class="v">${entry.keyConcept}</div></div>` : ''}
-    ${entry.example ? `<div class="ai-block"><span class="k">Example</span><div class="v">${entry.example}</div></div>` : ''}`;
+    ${entry.keyConcept ? `<div class="ai-block"><span class="k">Key Concept</span><div class="v">${escapeHtml(entry.keyConcept)}</div></div>` : ''}
+    ${entry.example ? `<div class="ai-block"><span class="k">Example</span><div class="v">${escapeHtml(entry.example)}</div></div>` : ''}`;
 }
 
 function renderAIMessage(el, tier, entry, apiFailed, question){
@@ -4121,7 +4307,7 @@ function renderAIMessage(el, tier, entry, apiFailed, question){
     el.querySelector('.ai-card').innerHTML = `
       <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
       ${errorBox}
-      <div class="ai-block"><span class="k">Explanation</span><div class="v" data-role="explanation-text">${entry.explanation}</div></div>
+      <div class="ai-block"><span class="k">Explanation</span><div class="v" data-role="explanation-text">${escapeHtml(entry.explanation)}</div></div>
       ${typeBlockHtml(entry)}
       <div class="notes-card-actions">
         ${hasSimple ? `<button class="note-action-btn btn-pop" data-action="toggle-simple">
@@ -4245,11 +4431,17 @@ document.getElementById('pendingAttachRemove').addEventListener('click', ()=>{
 });
 
 let chatHistory = []; // { role: 'user'|'assistant', content: string }[] — resets on page reload, same as chatWindow
+let awaitingQuizAnswer = null; // { subject, chapter, question } — set while Forge is waiting for the student to answer a posed quiz question in chat
 
 async function sendDoubt(){
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if(!text) return;
+
+  if(awaitingQuizAnswer){
+    await submitChatQuizAnswer(text);
+    return;
+  }
 
   const attachment = pendingAttachment;
   appendUserMessage(text, attachment ? { name: attachment.name, size: attachment.size } : null);
@@ -4286,6 +4478,7 @@ async function sendDoubt(){
 
   if(!entry) entry = findAnswer(text);
   if(entry) logDoubtHistory(text, entry.subject);
+  if(entry && entry.subject) logTopicActivity(entry.subject, entry.chapter || matchChapter(entry.subject, text), 'doubt');
   if(entry && !apiFailed){
     chatHistory.push({ role:'user', content:text }, { role:'assistant', content:entry.explanation });
     chatHistory = chatHistory.slice(-6);
@@ -4293,6 +4486,91 @@ async function sendDoubt(){
 
   thinkingEl.removeAttribute('id');
   renderAIMessage(thinkingEl, tier, entry, apiFailed, text);
+}
+
+/* --- Conversational quizzing: Forge poses a question in chat, the next message is graded --- */
+async function startChatQuiz(){
+  const subject = document.getElementById('examSelect').value;
+  appendUserMessage('Quiz me on ' + subject, null);
+  const thinkingEl = appendThinking('tier1');
+
+  let chapters = computeStudyPriority(subject).map(c => c.chapter).slice(0, 3);
+  if(!chapters.length){
+    const course = COURSE_CHAPTERS[subject];
+    chapters = course ? course.chapters.slice(0, 3) : [];
+  }
+
+  const type = Math.random() < 0.5 ? 'short' : 'long';
+  let q = null;
+  if(chapters.length){
+    try{
+      const resp = await fetch('/.netlify/functions/generate-quiz', {
+        method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ subject, chapters, type, count:1 })
+      });
+      if(resp.ok){
+        const data = await resp.json();
+        bumpTokenStat('generate-quiz', data.usage);
+        q = data.questions && data.questions[0];
+      }
+    } catch(e){}
+  }
+
+  thinkingEl.removeAttribute('id');
+  if(q){
+    awaitingQuizAnswer = { subject, chapter: q.chapter, question: q.text };
+    thinkingEl.querySelector('.ai-card').innerHTML = `
+      <div class="ai-card-head"><span class="who">Forge</span><span class="tier-badge t1">Tier 1 · Fast</span></div>
+      <div class="ai-block"><span class="k">Quiz</span><div class="v">${escapeHtml(q.text)}</div></div>
+      <div class="tt-sub">Type your answer below and send it.</div>`;
+  } else {
+    thinkingEl.querySelector('.ai-card').innerHTML = `
+      <div class="ai-card-head"><span class="who">Forge</span><span class="tier-badge t1">Tier 1 · Fast</span></div>
+      <div class="ai-fallback">Couldn't generate a quiz question right now — try again in a moment.</div>`;
+  }
+  document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
+}
+document.getElementById('chatQuizMeBtn').addEventListener('click', startChatQuiz);
+
+async function submitChatQuizAnswer(answerText){
+  const qa = awaitingQuizAnswer;
+  awaitingQuizAnswer = null;
+  const input = document.getElementById('chatInput');
+  appendUserMessage(answerText, null);
+  input.value = ''; input.style.height = 'auto';
+  const thinkingEl = appendThinking('tier1');
+
+  let result = null;
+  try{
+    const resp = await fetch('/.netlify/functions/grade-answer', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ subject: qa.subject, question: qa.question, answer: answerText })
+    });
+    if(resp.ok){
+      const data = await resp.json();
+      bumpTokenStat('grade-answer', data.usage);
+      if(data && data.verdict) result = data;
+    }
+  } catch(e){}
+
+  thinkingEl.removeAttribute('id');
+  const badge = '<span class="tier-badge t1">Tier 1 · Fast</span>';
+  if(result){
+    logTopicActivity(qa.subject, qa.chapter, 'chat-quiz', result.verdict !== 'incorrect');
+    const tag = result.verdict === 'correct' ? '✅ Correct' : result.verdict === 'partial' ? '🟡 Partially right' : '❌ Not quite';
+    thinkingEl.querySelector('.ai-card').innerHTML = `
+      <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
+      <div class="ai-block"><span class="k">${tag}</span><div class="v">${escapeHtml(result.feedback)}</div></div>
+      <div class="notes-card-actions" style="border-top:none; margin-top:0; padding-top:0;">
+        <button class="note-action-btn btn-pop" data-action="quiz-again">🎯 Quiz me again</button>
+      </div>`;
+    thinkingEl.querySelector('[data-action="quiz-again"]').addEventListener('click', startChatQuiz);
+  } else {
+    thinkingEl.querySelector('.ai-card').innerHTML = `
+      <div class="ai-card-head"><span class="who">Forge</span>${badge}</div>
+      <div class="ai-fallback">Couldn't reach Forge to grade that — try again in a moment.</div>`;
+  }
+  document.getElementById('chatWindow').scrollTop = document.getElementById('chatWindow').scrollHeight;
 }
 
 document.getElementById('chatSendBtn').addEventListener('click', sendDoubt);
@@ -4323,14 +4601,6 @@ function showTip(evt, html){
 function hideTip(){ chartTip.classList.remove('show'); }
 
 /* ---------- EXAM READINESS ---------- */
-const READINESS_DATA = {
-  'Data Structures and Algorithms': { overall:0, topicCoverage:0, weakTopic:0, mockScores:0, recency:0 },
-  'Database Management System':     { overall:0, topicCoverage:0, weakTopic:0, mockScores:0, recency:0 },
-  'Object Oriented Programming':    { overall:0, topicCoverage:0, weakTopic:0, mockScores:0, recency:0 },
-  'Digital Electronics':            { overall:0, topicCoverage:0, weakTopic:0, mockScores:0, recency:0 },
-  'Discrete Mathematics':           { overall:0, topicCoverage:0, weakTopic:0, mockScores:0, recency:0 },
-  'Business Ethics and IPR':        { overall:0, topicCoverage:0, weakTopic:0, mockScores:0, recency:0 }
-};
 const BAR_LABELS = [
   ['topicCoverage','Topic Coverage'],
   ['weakTopic','Weak-Topic Resolution'],
@@ -4338,13 +4608,91 @@ const BAR_LABELS = [
   ['recency','Recency']
 ];
 
-/* --- Topic pattern (reuses COURSE_CHAPTERS; flags a few as repeatedly-weak) --- */
-const TOPIC_WEAK_OVERRIDE = {};
+/* --- Readiness engine: everything computed live from forge-topic-activity, no stubs --- */
+function getTopicActivity(){ return JSON.parse(forgeStore.getItem('forge-topic-activity') || '[]'); }
 
-function readinessVerdictText(subject){
-  const d = READINESS_DATA[subject];
-  const weakCount = (TOPIC_WEAK_OVERRIDE[subject] || []).length;
-  if(d.topicCoverage === 0 && d.mockScores === 0) return `No activity logged yet for ${subject} — this fills in as you study, take quizzes, and log mock scores.`;
+function chapterStatus(subject, chapter, log){
+  const entries = log.filter(e => e.subject === subject && e.chapter === chapter);
+  if(!entries.length) return 'upcoming';
+  if(entries.some(e => e.correct === true)) return 'strong';
+  if(entries.some(e => e.correct === false)) return 'weak';
+  return 'learning'; // touched via a doubt/note, never quizzed on it yet
+}
+
+// Shared by computeReadiness (now) and the Subject Trend chart (reconstructing "as of N weeks
+// ago" by filtering the same real log to entries that existed by that date) — one formula,
+// no duplicated math between "current readiness" and "historical readiness".
+function computeReadinessFromLog(subject, log, referenceDate){
+  const course = COURSE_CHAPTERS[subject];
+  const chapters = course ? course.chapters : [];
+
+  const statuses = chapters.map(name => chapterStatus(subject, name, log));
+  const topicCoverage = chapters.length ? Math.round(statuses.filter(s => s !== 'upcoming').length / chapters.length * 100) : 0;
+
+  const weakChapters = chapters.filter((name, i) => log.some(e => e.chapter === name && e.correct === false));
+  const resolvedWeak = weakChapters.filter(name => log.some(e => e.chapter === name && e.correct === true));
+  const weakTopic = weakChapters.length ? Math.round(resolvedWeak.length / weakChapters.length * 100) : 100;
+
+  const quizEntries = log.filter(e => e.correct !== null);
+  const mockScores = quizEntries.length ? Math.round(quizEntries.filter(e => e.correct).length / quizEntries.length * 100) : 0;
+
+  let recency = 0;
+  if(log.length){
+    const lastDate = log.reduce((max, e) => e.date > max ? e.date : max, log[0].date);
+    const daysAgo = (referenceDate.getTime() - new Date(lastDate).getTime()) / 86400000;
+    recency = Math.max(0, Math.round((1 - daysAgo / 14) * 100));
+  }
+
+  const overall = Math.round((topicCoverage + weakTopic + mockScores + recency) / 4);
+  return { overall, topicCoverage, weakTopic, mockScores, recency, weakCount: weakChapters.length - resolvedWeak.length, hasActivity: log.length > 0 };
+}
+function computeReadiness(subject){
+  const log = getTopicActivity().filter(e => e.subject === subject);
+  return computeReadinessFromLog(subject, log, new Date());
+}
+function computeReadinessAtCutoff(subject, cutoffDate){
+  const log = getTopicActivity().filter(e => e.subject === subject && new Date(e.date) <= cutoffDate);
+  return computeReadinessFromLog(subject, log, cutoffDate);
+}
+
+/* --- Study Plan: client-side priority engine, real data drives the order, LLM only writes it up --- */
+function computeStudyPriority(subject){
+  const course = COURSE_CHAPTERS[subject];
+  if(!course) return [];
+  const log = getTopicActivity().filter(e => e.subject === subject);
+  const SCORE = { weak:3, upcoming:2, learning:1, strong:0 };
+  return course.chapters
+    .map(name => { const status = chapterStatus(subject, name, log); return { chapter:name, status, score:SCORE[status] }; })
+    .filter(c => c.score > 0)
+    .sort((a,b) => b.score - a.score);
+}
+
+function allocateStudyDays(orderedChapters, daysRemaining){
+  if(!orderedChapters.length || daysRemaining < 1) return [];
+  const perDay = Math.max(1, Math.ceil(orderedChapters.length / daysRemaining));
+  const days = [];
+  for(let i = 0; i < orderedChapters.length; i += perDay){
+    days.push({ day: days.length + 1, items: orderedChapters.slice(i, i + perDay) });
+  }
+  return days;
+}
+
+function computeAllSubjectsPriority(examDates){
+  const today = new Date();
+  const items = [];
+  for(const subject in COURSE_CHAPTERS){
+    const dateStr = examDates[subject];
+    if(!dateStr) continue;
+    const daysUntil = Math.ceil((new Date(dateStr) - today) / 86400000);
+    computeStudyPriority(subject).forEach(c => items.push(Object.assign({ subject, daysUntil }, c)));
+  }
+  items.sort((a,b) => b.score - a.score || a.daysUntil - b.daysUntil);
+  return items;
+}
+
+function readinessVerdictText(subject, d){
+  const weakCount = d.weakCount;
+  if(!d.hasActivity) return `No activity logged yet for ${subject} — this fills in as you study, take quizzes, and log mock scores.`;
   if(d.overall >= 80) return `Strong position for ${subject} — keep light review on ${weakCount} flagged topic${weakCount===1?'':'s'} and you're set.`;
   if(d.overall >= 55) return `On track for ${subject}, but ${weakCount} topic${weakCount===1?'':'s'} still need focused practice before the exam.`;
   return `${subject} needs attention — ${weakCount} weak topic${weakCount===1?'':'s'} and low mock coverage. Prioritize this subject this week.`;
@@ -4355,14 +4703,9 @@ function renderTopicPattern(subject){
   const data = COURSE_CHAPTERS[subject];
   list.innerHTML = '';
   if(!data) return;
-  const weakSet = new Set(TOPIC_WEAK_OVERRIDE[subject] || []);
-  data.chapters.forEach((name, idx)=>{
-    const num = idx + 1;
-    let status;
-    if(weakSet.has(num)) status = 'weak';
-    else if(num < data.current) status = 'strong';
-    else if(num === data.current) status = 'learning';
-    else status = 'upcoming';
+  const log = getTopicActivity().filter(e => e.subject === subject);
+  data.chapters.forEach(name=>{
+    const status = chapterStatus(subject, name, log);
     const chip = document.createElement('div');
     chip.className = 'topic-chip ' + status;
     chip.innerHTML = `<span class="dot"></span>${name}`;
@@ -4371,10 +4714,10 @@ function renderTopicPattern(subject){
 }
 
 function renderReadiness(subject){
-  const d = READINESS_DATA[subject];
+  const d = computeReadiness(subject);
   document.getElementById('readinessSubject').textContent = subject;
   document.getElementById('readinessPct').textContent = d.overall + '%';
-  document.getElementById('readinessVerdict').textContent = readinessVerdictText(subject);
+  document.getElementById('readinessVerdict').textContent = readinessVerdictText(subject, d);
   const ring = document.getElementById('readinessRing');
   const deg = (d.overall/100*360).toFixed(1);
   requestAnimationFrame(()=>{
@@ -4401,6 +4744,117 @@ function renderReadiness(subject){
 document.getElementById('examSelect').addEventListener('change', (e)=> renderReadiness(e.target.value));
 renderReadiness('Data Structures and Algorithms');
 
+/* --- Readiness Check: real data score + fresh diagnostic quiz, combined into one verdict --- */
+let rcState = null;
+
+async function startReadinessCheck(){
+  const subject = document.getElementById('examSelect').value;
+  document.getElementById('rcIdle').style.display = 'none';
+  document.getElementById('rcVerdictArea').style.display = 'none';
+  const quizArea = document.getElementById('rcQuizArea');
+  quizArea.style.display = 'block';
+  quizArea.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div>`;
+
+  let chapters = computeStudyPriority(subject).map(c => c.chapter).slice(0, 5);
+  if(!chapters.length){
+    const course = COURSE_CHAPTERS[subject];
+    chapters = course ? course.chapters.slice(0, 5) : [];
+  }
+
+  let questions = [];
+  if(chapters.length){
+    try{
+      const resp = await fetch('/.netlify/functions/generate-quiz', {
+        method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ subject, chapters, type:'mcq', count:5 })
+      });
+      if(resp.ok){
+        const data = await resp.json();
+        bumpTokenStat('generate-quiz', data.usage);
+        questions = data.questions || [];
+      }
+    } catch(e){}
+  }
+
+  if(!questions.length){
+    quizArea.innerHTML = errorFaceBox('Couldn\'t generate a diagnostic quiz right now — try again in a moment.');
+    document.getElementById('rcIdle').style.display = 'block';
+    return;
+  }
+
+  rcState = { subject, questions, index:0, correct:0, missedChapters:[] };
+  renderRcQuestion();
+}
+
+function renderRcQuestion(){
+  const quizArea = document.getElementById('rcQuizArea');
+  const q = rcState.questions[rcState.index];
+  quizArea.innerHTML = `
+    <div class="tt-sub" style="margin-bottom:8px;">Question ${rcState.index+1} of ${rcState.questions.length}</div>
+    <div style="font-weight:600; margin-bottom:14px;">${escapeHtml(q.text)}</div>
+    <div id="rcOptions"></div>`;
+  const optWrap = document.getElementById('rcOptions');
+  q.options.forEach(opt=>{
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = opt;
+    btn.addEventListener('click', ()=> answerRcQuestion(opt, q));
+    optWrap.appendChild(btn);
+  });
+}
+
+function answerRcQuestion(opt, q){
+  const isCorrect = opt === q.correct;
+  if(isCorrect) rcState.correct++;
+  else rcState.missedChapters.push(q.chapter);
+  logTopicActivity(rcState.subject, q.chapter, 'quiz', isCorrect);
+  rcState.index++;
+  if(rcState.index < rcState.questions.length) renderRcQuestion();
+  else finishReadinessCheck();
+}
+
+async function finishReadinessCheck(){
+  const quizArea = document.getElementById('rcQuizArea');
+  quizArea.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div>`;
+  const dataReadiness = computeReadiness(rcState.subject);
+  let verdict = null;
+  try{
+    const resp = await fetch('/.netlify/functions/readiness-verdict', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({
+        subject: rcState.subject,
+        dataReadiness,
+        diagnostic: { correct: rcState.correct, total: rcState.questions.length, missedChapters: [...new Set(rcState.missedChapters)] }
+      })
+    });
+    if(resp.ok){
+      const data = await resp.json();
+      bumpTokenStat('readiness-verdict', data.usage);
+      if(data.verdict) verdict = data;
+    }
+  } catch(e){}
+
+  quizArea.style.display = 'none';
+  const verdictArea = document.getElementById('rcVerdictArea');
+  verdictArea.style.display = 'block';
+  const verdictLabel = { ready:'✅ Exam Ready', borderline:'⚠️ Borderline', not_ready:'❌ Not Ready Yet' };
+  const verdictClass = { ready:'correct', borderline:'', not_ready:'incorrect' };
+  verdictArea.innerHTML = verdict
+    ? `<div class="quiz-feedback show ${verdictClass[verdict.verdict] || ''}" style="display:block;">
+        <b style="font-size:16px;">${verdictLabel[verdict.verdict] || 'Result'}</b>
+        <div style="margin-top:8px;">${escapeHtml(verdict.summary)}</div>
+        <div class="tt-sub" style="margin-top:10px;">Diagnostic: ${rcState.correct}/${rcState.questions.length} correct</div>
+      </div>
+      <button class="note-action-btn btn-pop" id="rcRetryBtn" style="margin-top:14px;">Take Again</button>`
+    : `${errorFaceBox('Couldn\'t reach Forge to combine your results — you scored ' + rcState.correct + '/' + rcState.questions.length + ' on the diagnostic, use that as a rough signal for now.')}<button class="note-action-btn btn-pop" id="rcRetryBtn" style="margin-top:14px;">Take Again</button>`;
+  document.getElementById('rcRetryBtn').addEventListener('click', ()=>{
+    verdictArea.style.display = 'none';
+    document.getElementById('rcIdle').style.display = 'block';
+  });
+  renderReadiness(document.getElementById('examSelect').value);
+}
+document.getElementById('rcStartBtn').addEventListener('click', startReadinessCheck);
+
 /* --- Journey strip: since Day 1 --- */
 const JOURNEY_START_DATE = new Date('2026-02-02');
 function renderJourneyStrip(){
@@ -4414,11 +4868,74 @@ renderJourneyStrip();
 /* --- Practice activity: seeded historical baseline + live localStorage counts --- */
 function getStat(key){ return parseInt(forgeStore.getItem('forge-stat-' + key) || '0', 10); }
 function bumpStat(key, by){ forgeStore.setItem('forge-stat-' + key, getStat(key) + by); }
+// Token usage is tracked here (student-facing page) but only ever displayed in
+// admin-dashboard.html — students don't need to see API cost, that's an internal number.
 function bumpTokenStat(feature, usage){
   if(!usage || !usage.total_tokens) return;
   bumpStat('tokens-' + feature, usage.total_tokens);
   bumpStat('tokens-total', usage.total_tokens);
-  if(typeof renderAIUsageStats === 'function') renderAIUsageStats();
+}
+
+// Readiness engine's single source of truth — one entry per quiz attempt/doubt/note,
+// tagged to a chapter where known. correct is true/false for quiz attempts, null for
+// doubts/notes (no right/wrong there — they still count toward Topic Coverage).
+/* --- Topic study modal: video picker (find-videos.js) + real existing data for one chapter --- */
+function topicVideoCardHtml(video, isBest){
+  return `<a class="topic-video-card${isBest ? ' best' : ''}" href="https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}" target="_blank" rel="noopener">
+    <img src="${video.thumbnail}" alt="">
+    <div class="tv-title">${escapeHtml(video.title)}</div>
+    <div class="tv-meta">${escapeHtml(video.channelTitle)}${isBest ? ' · Best pick' : ''}</div>
+  </a>`;
+}
+
+async function loadTopicVideos(subject, chapter){
+  const el = document.getElementById('topicModalVideos');
+  el.innerHTML = '<p class="tt-sub">Loading videos…</p>';
+  try{
+    const resp = await fetch('/.netlify/functions/find-videos', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ subject, chapter })
+    });
+    const data = resp.ok ? await resp.json() : null;
+    if(!data || data.error || !data.videos.length){
+      el.innerHTML = '<p class="tt-sub">Couldn\'t load videos for this topic right now.</p>';
+      return;
+    }
+    el.innerHTML = `<div class="topic-video-grid">${data.videos.map(v => topicVideoCardHtml(v, v.videoId === data.bestVideoId)).join('')}</div>`;
+  } catch(e){
+    el.innerHTML = '<p class="tt-sub">Couldn\'t load videos for this topic right now.</p>';
+  }
+}
+
+function openTopicModal(subject, chapter){
+  document.getElementById('topicModalTitle').textContent = chapter;
+  const status = chapterStatus(subject, chapter, getTopicActivity());
+  const chip = document.getElementById('topicModalStatusChip');
+  chip.className = 'topic-modal-status-chip ' + status;
+  chip.textContent = status;
+
+  const activity = getTopicActivity().filter(e => e.subject === subject && e.chapter === chapter);
+  const activityEl = document.getElementById('topicModalActivity');
+  activityEl.innerHTML = activity.length
+    ? activity.slice(-5).reverse().map(e => `<div class="topic-activity-row">${escapeHtml(e.source)} — ${new Date(e.date).toLocaleDateString()}${e.correct === true ? ' · correct' : e.correct === false ? ' · incorrect' : ''}</div>`).join('')
+    : '<div class="topic-activity-row">No activity logged on this chapter yet.</div>';
+
+  document.body.classList.add('topic-modal-open');
+  loadTopicVideos(subject, chapter);
+}
+window.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('topicModalClose').addEventListener('click', (e)=>{ e.preventDefault(); document.body.classList.remove('topic-modal-open'); });
+  document.getElementById('topicModalBackdrop').addEventListener('click', ()=> document.body.classList.remove('topic-modal-open'));
+});
+
+function logTopicActivity(subject, chapter, source, correct){
+  if(!subject || !chapter) return;
+  const log = JSON.parse(forgeStore.getItem('forge-topic-activity') || '[]');
+  log.push({ subject, chapter, source, correct: correct === undefined ? null : correct, date: new Date().toISOString() });
+  forgeStore.setItem('forge-topic-activity', JSON.stringify(log.slice(-1000)));
+  // Heatmap/streak no longer require a full 25-min Pomodoro session — any real interaction
+  // (quiz answer, doubt, note, viva turn) marks the day as active with a modest time credit.
+  logStudyMinutes(3);
 }
 
 function renderActivityStats(){
@@ -4433,28 +4950,6 @@ function renderActivityStats(){
   document.getElementById('activityDoubtsNum').textContent = doubts;
 }
 renderActivityStats();
-
-/* --- AI Usage: live per-feature token counts, real data from every Groq call this session --- */
-const AI_FEATURES = [
-  { key:'ask-doubt', label:'Ask Forge (Doubts)' },
-  { key:'generate-note', label:'Notes Generated' },
-  { key:'assignment-tip', label:'Assignment Priority' },
-  { key:'strategy-tip', label:'Strategy Tips' },
-  { key:'grade-answer', label:'Quiz Grading' },
-  { key:'viva-turn', label:'Viva Prep' }
-];
-function renderAIUsageStats(){
-  const grid = document.getElementById('aiUsageGrid');
-  grid.innerHTML = AI_FEATURES.map((f, i) => `
-    <div class="stat-card c${(i % 4) + 1}">
-      <div>
-        <div class="num">${getStat('tokens-' + f.key).toLocaleString()}</div>
-        <div class="label">${f.label}</div>
-      </div>
-    </div>`).join('');
-  document.getElementById('aiUsageTotalNum').textContent = getStat('tokens-total').toLocaleString() + ' tokens total';
-}
-renderAIUsageStats();
 
 /* --- Exam history --- */
 const EXAM_HISTORY = [];
@@ -4479,22 +4974,28 @@ function renderExamHistory(){
 }
 renderExamHistory();
 
-/* --- Subject Trend: smoothed multi-line wave chart --- */
-const WEEKLY_TREND = {
-  'Data Structures and Algorithms': [0,0,0,0,0,0,0,0,0,0],
-  'Database Management System':     [0,0,0,0,0,0,0,0,0,0],
-  'Object Oriented Programming':    [0,0,0,0,0,0,0,0,0,0],
-  'Digital Electronics':            [0,0,0,0,0,0,0,0,0,0],
-  'Discrete Mathematics':           [0,0,0,0,0,0,0,0,0,0],
-  'Business Ethics and IPR':        [0,0,0,0,0,0,0,0,0,0]
-};
+/* --- Subject Trend: smoothed multi-line wave chart, reconstructed from the real dated log --- */
+function buildWeeklyTrend(){
+  const weeks = 10;
+  const trend = {};
+  Object.keys(COURSE_CHAPTERS).forEach(subject => {
+    trend[subject] = [];
+    for(let i = weeks - 1; i >= 0; i--){
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - i * 7);
+      trend[subject].push(computeReadinessAtCutoff(subject, cutoff).overall);
+    }
+  });
+  return trend;
+}
+let WEEKLY_TREND = buildWeeklyTrend();
 const WAVE_COLORS = {
   'Data Structures and Algorithms': 'var(--pink)',
   'Database Management System':     'var(--blue)',
   'Object Oriented Programming':    'var(--green)',
   'Digital Electronics':            'var(--yellow)',
-  'Discrete Mathematics':           'var(--pink)',
-  'Business Ethics and IPR':        'var(--blue)'
+  'Discrete Mathematics':           'var(--wave5)',
+  'Business Ethics and IPR':        'var(--wave6)'
 };
 
 function smoothPath(points){
@@ -4515,6 +5016,7 @@ function smoothPath(points){
 }
 
 function renderWaveChart(){
+  WEEKLY_TREND = buildWeeklyTrend(); // rebuilt from the live log every call — not a stale snapshot
   const svg = document.getElementById('waveChart');
   const NS = 'http://www.w3.org/2000/svg';
   svg.innerHTML = '';
@@ -4980,7 +5482,7 @@ async function askAssignmentPriority(){
     } else { apiFailed = true; }
   } catch(e){ apiFailed = true; }
   if(tip){
-    area.innerHTML = `<div class="assignment-tip-box"><b>💡 Forge's take:</b> ${tip}</div>`;
+    area.innerHTML = `<div class="assignment-tip-box"><b>💡 Forge's take:</b> ${escapeHtml(tip)}</div>`;
   } else {
     area.innerHTML = errorFaceBox('Couldn\'t get an AI priority tip right now — showing your list sorted by due date instead, which is your safest bet.');
   }
@@ -4994,7 +5496,7 @@ checkAssignmentReminders(false);
 const STRATEGY_SUBJECTS = ['Data Structures and Algorithms','Database Management System','Object Oriented Programming','Digital Electronics','Discrete Mathematics','Business Ethics and IPR'];
 
 function getAcademic(){
-  return Object.assign({ cgpaHistory: [], attendanceCutoff: 75, attendance: [], backlogs: [] }, JSON.parse(forgeStore.getItem('forge-academic') || 'null') || {});
+  return Object.assign({ cgpaHistory: [], attendanceCutoff: 75, attendance: [], backlogs: [], examDates: {} }, JSON.parse(forgeStore.getItem('forge-academic') || 'null') || {});
 }
 function saveAcademic(a){ forgeStore.setItem('forge-academic', JSON.stringify(a)); }
 
@@ -5188,7 +5690,7 @@ async function askWeeklyStrategy(){
     if(resp.ok){ const data = await resp.json(); bumpTokenStat('strategy-tip', data.usage); if(data && data.tip) tip = data.tip; }
   } catch(e){}
   area.innerHTML = tip
-    ? `<div class="assignment-tip-box"><b>💡 Forge's take:</b> ${tip}</div>`
+    ? `<div class="assignment-tip-box"><b>💡 Forge's take:</b> ${escapeHtml(tip)}</div>`
     : errorFaceBox('Couldn\'t reach the AI planner right now — check your closest backlog exam date and lowest attendance subject first, those carry the most risk.');
 }
 document.getElementById('weeklyTipBtn').addEventListener('click', askWeeklyStrategy);
@@ -5210,7 +5712,7 @@ async function askBacklogTip(id){
     if(resp.ok){ const data = await resp.json(); bumpTokenStat('strategy-tip', data.usage); if(data && data.tip) tip = data.tip; }
   } catch(e){}
   area.innerHTML = tip
-    ? `<b>💡 Forge's take:</b> ${tip}`
+    ? `<b>💡 Forge's take:</b> ${escapeHtml(tip)}`
     : `<b>Couldn't reach the AI planner right now</b> — start with past papers for this subject and block out revision time before the exam date.`;
 }
 
@@ -5218,6 +5720,106 @@ renderStrategySummary();
 renderAttendance();
 renderCgpaList();
 renderBacklogs();
+
+/* ---------- STUDY PLAN: client-side priority engine + LLM write-up ---------- */
+let spMode = 'single';
+
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  return Math.max(1, Math.ceil((new Date(dateStr) - new Date()) / 86400000));
+}
+
+function renderSpDatesList(){
+  const a = getAcademic();
+  const wrap = document.getElementById('spAllDatesList');
+  wrap.innerHTML = Object.keys(COURSE_CHAPTERS).map(subject => `
+    <div class="quickadd-row" style="align-items:center;">
+      <span style="font-size:12.5px; flex:1;">${subject}</span>
+      <input type="date" data-sp-date="${subject}" value="${a.examDates[subject] || ''}" style="max-width:160px;">
+    </div>`).join('');
+  wrap.querySelectorAll('[data-sp-date]').forEach(input=>{
+    input.addEventListener('change', ()=>{
+      const acad = getAcademic();
+      acad.examDates[input.dataset.spDate] = input.value;
+      saveAcademic(acad);
+      renderSpPriority();
+    });
+  });
+}
+
+function spStatusLabel(status){
+  return status === 'weak' ? 'Needs fixing' : status === 'learning' ? 'Asked, not tested' : 'Not covered yet';
+}
+
+function renderSpPriority(){
+  const listEl = document.getElementById('spPriorityList');
+  if(spMode === 'single'){
+    const subject = document.getElementById('spSubjectInput').value;
+    const items = computeStudyPriority(subject);
+    listEl.innerHTML = items.length
+      ? `<div class="topic-pattern-list">${items.map(it => `<div class="topic-chip ${it.status}"><span class="dot"></span>${it.chapter}</div>`).join('')}</div>`
+      : `<div class="notes-empty">Nothing flagged for ${subject} yet — take a quiz or ask a doubt to build a priority order.</div>`;
+  } else {
+    const a = getAcademic();
+    const items = computeAllSubjectsPriority(a.examDates);
+    listEl.innerHTML = items.length
+      ? `<div class="topic-pattern-list">${items.map(it => `<div class="topic-chip ${it.status}"><span class="dot"></span>${it.chapter} · ${it.subject}</div>`).join('')}</div>`
+      : `<div class="notes-empty">Set exam dates above to build a combined priority order across subjects.</div>`;
+  }
+}
+
+document.getElementById('spModeSingleBtn').addEventListener('click', ()=>{
+  spMode = 'single';
+  document.getElementById('spSingleMode').style.display = 'block';
+  document.getElementById('spAllMode').style.display = 'none';
+  renderSpPriority();
+});
+document.getElementById('spModeAllBtn').addEventListener('click', ()=>{
+  spMode = 'all';
+  document.getElementById('spSingleMode').style.display = 'none';
+  document.getElementById('spAllMode').style.display = 'block';
+  renderSpDatesList();
+  renderSpPriority();
+});
+document.getElementById('spSubjectInput').addEventListener('change', renderSpPriority);
+renderSpPriority();
+
+document.getElementById('spGenerateBtn').addEventListener('click', async ()=>{
+  const planArea = document.getElementById('spPlanArea');
+  const btn = document.getElementById('spGenerateBtn');
+  let body;
+
+  if(spMode === 'single'){
+    const subject = document.getElementById('spSubjectInput').value;
+    const examDate = document.getElementById('spExamDateInput').value;
+    if(!examDate){ showToast('Pick an exam date first'); return; }
+    const remaining = daysUntil(examDate);
+    const days = allocateStudyDays(computeStudyPriority(subject), remaining);
+    if(!days.length){ showToast(`Nothing flagged for ${subject} yet — take a quiz or ask a doubt first`); return; }
+    body = { mode:'studyplan', subject, daysRemaining: remaining, days };
+  } else {
+    const a = getAcademic();
+    const items = computeAllSubjectsPriority(a.examDates);
+    if(!items.length){ showToast('Set at least one exam date above first'); return; }
+    const remaining = Math.min(...items.map(it => it.daysUntil).filter(d => d > 0));
+    const days = allocateStudyDays(items, remaining || 1);
+    body = { mode:'studyplan', daysRemaining: remaining || 1, days };
+  }
+
+  btn.disabled = true;
+  planArea.innerHTML = `<div class="assignment-tip-box"><div class="thinking-dots"><span></span><span></span><span></span></div></div>`;
+  let plan = null;
+  try{
+    const resp = await fetch('/.netlify/functions/strategy-tip', {
+      method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify(body)
+    });
+    if(resp.ok){ const data = await resp.json(); bumpTokenStat('strategy-tip', data.usage); if(data && data.plan) plan = data.plan; }
+  } catch(e){}
+  btn.disabled = false;
+  planArea.innerHTML = plan
+    ? `<div class="assignment-tip-box ai-line-by-line">${escapeHtml(plan)}</div>`
+    : errorFaceBox('Couldn\'t reach the AI planner right now — the priority order above is still accurate, just tackle it top to bottom.');
+});
 
 /* ---------- OFFICIAL CLASS TIMETABLE (Section III D, CE) ---------- */
 /* Straight from: SCT Academic Timetable 2026-27 (Odd Sem), Ref IAR/SCT/E/2026-27/TT/04, w.e.f. 27/07/2026.
@@ -5595,9 +6197,9 @@ function renderNotesLibrary(){
 }
 function noteContentHTML(entry){
   return `
-    <div class="note-title">${entry.title}</div>
+    <div class="note-title">${escapeHtml(entry.title)}</div>
     <div class="note-sections">
-    ${entry.sections.map(s => `<div class="note-box"><div class="note-h"><span class="note-h-icon">${NOTE_SECTION_ICONS[s.heading] || '✎'}</span>${s.heading}</div><ul class="note-ul">${s.bullets.map(b=>`<li>${b}</li>`).join('')}</ul></div>`).join('')}
+    ${entry.sections.map(s => `<div class="note-box"><div class="note-h"><span class="note-h-icon">${NOTE_SECTION_ICONS[s.heading] || '✎'}</span>${escapeHtml(s.heading)}</div><ul class="note-ul">${s.bullets.map(b=>`<li>${escapeHtml(b)}</li>`).join('')}</ul></div>`).join('')}
     </div>`;
 }
 function downloadNotePDF(entry){
@@ -5682,6 +6284,10 @@ async function generateNotes(topic){
     }
   } catch(e){ apiFailed = true; /* offline, or no Netlify function server (e.g. opened via file://) */ }
   if(!entry) entry = findNote(text);
+  if(entry){
+    const match = matchSubjectAndChapter(text);
+    if(match) logTopicActivity(match.subject, match.chapter, 'note');
+  }
   renderNoteResult(tier, entry, apiFailed);
 }
 document.getElementById('notesGenBtn').addEventListener('click', ()=>{
@@ -5794,139 +6400,139 @@ renderFlashcard();
 
 /* ---------- QUIZ ---------- */
 const MCQ_QUESTIONS = [
-  { subject:'Data Structures and Algorithms', text:'Which data structure follows LIFO order?', options:['Queue','Stack','Linked List','Tree'], correct:'Stack',
+  { subject:'Data Structures and Algorithms', chapter:'Stacks', text:'Which data structure follows LIFO order?', options:['Queue','Stack','Linked List','Tree'], correct:'Stack',
     explanation:'A stack only exposes its top element — the last item pushed is the first one popped. That\'s exactly LIFO.' },
-  { subject:'Data Structures and Algorithms', text:'What is the time complexity of binary search on a sorted array of size n?', options:['O(n)','O(log n)','O(n log n)','O(1)'], correct:'O(log n)',
+  { subject:'Data Structures and Algorithms', chapter:'Arrays & Complexity Analysis', text:'What is the time complexity of binary search on a sorted array of size n?', options:['O(n)','O(log n)','O(n log n)','O(1)'], correct:'O(log n)',
     explanation:'Binary search halves the remaining search space on every comparison, so the number of steps grows logarithmically with n.' },
-  { subject:'Data Structures and Algorithms', text:'Which operation adds an element to a queue?', options:['Push','Enqueue','Pop','Peek'], correct:'Enqueue',
+  { subject:'Data Structures and Algorithms', chapter:'Queues', text:'Which operation adds an element to a queue?', options:['Push','Enqueue','Pop','Peek'], correct:'Enqueue',
     explanation:'Enqueue adds to the rear of a queue and dequeue removes from the front — together they give FIFO order.' },
 
-  { subject:'Database Management System', text:'Which SQL clause filters groups after GROUP BY?', options:['WHERE','HAVING','FILTER','ORDER BY'], correct:'HAVING',
+  { subject:'Database Management System', chapter:'Advanced SQL (Joins, Subqueries, Views)', text:'Which SQL clause filters groups after GROUP BY?', options:['WHERE','HAVING','FILTER','ORDER BY'], correct:'HAVING',
     explanation:'WHERE filters individual rows before grouping; HAVING filters aggregated groups after GROUP BY runs.' },
-  { subject:'Database Management System', text:'A table in 2NF with a transitive dependency violates which normal form?', options:['1NF','2NF','3NF','BCNF'], correct:'3NF',
+  { subject:'Database Management System', chapter:'Normalization (1NF–BCNF)', text:'A table in 2NF with a transitive dependency violates which normal form?', options:['1NF','2NF','3NF','BCNF'], correct:'3NF',
     explanation:'3NF requires that no non-key attribute depends transitively (through another non-key attribute) on the primary key.' },
-  { subject:'Database Management System', text:'Which JOIN returns all rows from the left table, with NULLs where there is no match on the right?', options:['INNER JOIN','LEFT JOIN','RIGHT JOIN','CROSS JOIN'], correct:'LEFT JOIN',
+  { subject:'Database Management System', chapter:'Advanced SQL (Joins, Subqueries, Views)', text:'Which JOIN returns all rows from the left table, with NULLs where there is no match on the right?', options:['INNER JOIN','LEFT JOIN','RIGHT JOIN','CROSS JOIN'], correct:'LEFT JOIN',
     explanation:'LEFT JOIN keeps every row from the left table regardless of a match, filling unmatched right-side columns with NULL.' },
 
-  { subject:'Object Oriented Programming', text:'Which OOP pillar lets a Dog class reuse behavior from an Animal class?', options:['Encapsulation','Inheritance','Polymorphism','Abstraction'], correct:'Inheritance',
+  { subject:'Object Oriented Programming', chapter:'Inheritance', text:'Which OOP pillar lets a Dog class reuse behavior from an Animal class?', options:['Encapsulation','Inheritance','Polymorphism','Abstraction'], correct:'Inheritance',
     explanation:'Inheritance lets a subclass acquire the fields and methods of a parent class, avoiding duplicated code.' },
-  { subject:'Object Oriented Programming', text:'Two methods with the same name but different parameter lists is an example of?', options:['Runtime polymorphism','Compile-time polymorphism','Inheritance','Encapsulation'], correct:'Compile-time polymorphism',
+  { subject:'Object Oriented Programming', chapter:'Polymorphism (Overloading & Overriding)', text:'Two methods with the same name but different parameter lists is an example of?', options:['Runtime polymorphism','Compile-time polymorphism','Inheritance','Encapsulation'], correct:'Compile-time polymorphism',
     explanation:'This is method overloading, resolved at compile time based on the argument types/count — hence "compile-time" polymorphism.' },
-  { subject:'Object Oriented Programming', text:'Which keyword typically prevents a class from being instantiated directly?', options:['final','abstract','static','private'], correct:'abstract',
+  { subject:'Object Oriented Programming', chapter:'Abstract Classes & Interfaces', text:'Which keyword typically prevents a class from being instantiated directly?', options:['final','abstract','static','private'], correct:'abstract',
     explanation:'An abstract class can define structure/behavior for subclasses but cannot be instantiated on its own.' },
 
-  { subject:'Digital Electronics', text:'Which logic gate is called a "universal gate"?', options:['AND','OR','NAND','XOR'], correct:'NAND',
+  { subject:'Digital Electronics', chapter:'Boolean Algebra & Logic Gates', text:'Which logic gate is called a "universal gate"?', options:['AND','OR','NAND','XOR'], correct:'NAND',
     explanation:'Any Boolean function (AND, OR, NOT) can be built using only NAND gates, which is why it\'s called universal.' },
-  { subject:'Digital Electronics', text:'A flip-flop changes state based on which signal?', options:['Voltage level','Clock edge','Input resistance','Power supply'], correct:'Clock edge',
+  { subject:'Digital Electronics', chapter:'Sequential Circuits (Flip-Flops, Latches)', text:'A flip-flop changes state based on which signal?', options:['Voltage level','Clock edge','Input resistance','Power supply'], correct:'Clock edge',
     explanation:'Edge-triggered flip-flops only change output at the rising or falling edge of the clock signal, not continuously.' },
-  { subject:'Digital Electronics', text:'Binary number 1011 equals which decimal value?', options:['9','11','13','10'], correct:'11',
+  { subject:'Digital Electronics', chapter:'Number Systems & Codes', text:'Binary number 1011 equals which decimal value?', options:['9','11','13','10'], correct:'11',
     explanation:'1011 = 1×8 + 0×4 + 1×2 + 1×1 = 8+0+2+1 = 11.' },
 
-  { subject:'Discrete Mathematics', text:'How many ways can you arrange 3 distinct books on a shelf?', options:['3','6','9','12'], correct:'6',
+  { subject:'Discrete Mathematics', chapter:'Combinatorics (Permutations & Combinations)', text:'How many ways can you arrange 3 distinct books on a shelf?', options:['3','6','9','12'], correct:'6',
     explanation:'The number of arrangements of 3 distinct items is 3! = 3×2×1 = 6.' },
-  { subject:'Discrete Mathematics', text:'Choosing 2 items from 4 without regard to order is written as?', options:['4P2','4C2','4^2','2^4'], correct:'4C2',
+  { subject:'Discrete Mathematics', chapter:'Combinatorics (Permutations & Combinations)', text:'Choosing 2 items from 4 without regard to order is written as?', options:['4P2','4C2','4^2','2^4'], correct:'4C2',
     explanation:'"C" (combination) notation is used when order doesn\'t matter; 4C2 = 6 ways to pick 2 of 4 items.' },
-  { subject:'Discrete Mathematics', text:'A connected graph with no cycles is called a?', options:['Tree','Cycle','Path','Clique'], correct:'Tree',
+  { subject:'Discrete Mathematics', chapter:'Trees (Graph-Theoretic)', text:'A connected graph with no cycles is called a?', options:['Tree','Cycle','Path','Clique'], correct:'Tree',
     explanation:'A tree is defined as a connected, acyclic graph — exactly one path exists between any two vertices.' },
 
-  { subject:'Business Ethics and IPR', text:'Which IP protection covers software source code as a creative work?', options:['Patent','Copyright','Trademark','Trade Secret'], correct:'Copyright',
+  { subject:'Business Ethics and IPR', chapter:'Copyright & Trade Secrets', text:'Which IP protection covers software source code as a creative work?', options:['Patent','Copyright','Trademark','Trade Secret'], correct:'Copyright',
     explanation:'Source code is treated as a literary work under copyright law, protected automatically from the moment it\'s written.' },
-  { subject:'Business Ethics and IPR', text:'A confidential recipe kept secret rather than patented is protected as a?', options:['Patent','Trademark','Trade Secret','Copyright'], correct:'Trade Secret',
+  { subject:'Business Ethics and IPR', chapter:'Copyright & Trade Secrets', text:'A confidential recipe kept secret rather than patented is protected as a?', options:['Patent','Trademark','Trade Secret','Copyright'], correct:'Trade Secret',
     explanation:'Trade secrets rely on secrecy rather than registration — once revealed, the protection is generally lost.' },
-  { subject:'Business Ethics and IPR', text:'Roughly how long does a patent typically last from filing?', options:['5 years','10 years','20 years','Forever'], correct:'20 years',
+  { subject:'Business Ethics and IPR', chapter:'Patent Filing Process', text:'Roughly how long does a patent typically last from filing?', options:['5 years','10 years','20 years','Forever'], correct:'20 years',
     explanation:'Most patent systems (including India\'s) grant exclusive rights for 20 years from the filing date.' },
 
-  { subject:'Data Structures and Algorithms', text:'What is the worst-case time complexity of quicksort?', options:['O(n log n)','O(n^2)','O(log n)','O(n)'], correct:'O(n^2)',
+  { subject:'Data Structures and Algorithms', chapter:'Sorting Algorithms', text:'What is the worst-case time complexity of quicksort?', options:['O(n log n)','O(n^2)','O(log n)','O(n)'], correct:'O(n^2)',
     explanation:'A poor pivot choice (e.g. always picking the first element on already-sorted data) degrades quicksort to O(n^2) instead of its average O(n log n).' },
-  { subject:'Data Structures and Algorithms', text:'Which data structure is best suited for implementing a priority queue?', options:['Array','Heap','Stack','Linked List'], correct:'Heap',
+  { subject:'Data Structures and Algorithms', chapter:'Heaps', text:'Which data structure is best suited for implementing a priority queue?', options:['Array','Heap','Stack','Linked List'], correct:'Heap',
     explanation:'A heap keeps the highest (or lowest) priority element at the root, giving O(log n) insert and extract-min/max.' },
-  { subject:'Data Structures and Algorithms', text:'In a hash table, what is a collision?', options:['Two keys hashing to the same index','A key with no value','An empty bucket','A duplicate value'], correct:'Two keys hashing to the same index',
+  { subject:'Data Structures and Algorithms', chapter:'Hashing', text:'In a hash table, what is a collision?', options:['Two keys hashing to the same index','A key with no value','An empty bucket','A duplicate value'], correct:'Two keys hashing to the same index',
     explanation:'Collisions happen when the hash function maps different keys to the same slot; resolved via chaining or open addressing.' },
 
-  { subject:'Database Management System', text:'Which SQL command removes a table\'s structure and all its data?', options:['DELETE','TRUNCATE','DROP','REMOVE'], correct:'DROP',
+  { subject:'Database Management System', chapter:'Relational Algebra & SQL Basics', text:'Which SQL command removes a table\'s structure and all its data?', options:['DELETE','TRUNCATE','DROP','REMOVE'], correct:'DROP',
     explanation:'DROP removes the entire table definition and data; DELETE removes rows but keeps structure; TRUNCATE clears rows fast but keeps structure too.' },
-  { subject:'Database Management System', text:'What does ACID\'s "Isolation" guarantee?', options:['Data is encrypted','Concurrent transactions don\'t interfere with each other','Data is backed up','Transactions never fail'], correct:'Concurrent transactions don\'t interfere with each other',
+  { subject:'Database Management System', chapter:'Transactions & Concurrency Control', text:'What does ACID\'s "Isolation" guarantee?', options:['Data is encrypted','Concurrent transactions don\'t interfere with each other','Data is backed up','Transactions never fail'], correct:'Concurrent transactions don\'t interfere with each other',
     explanation:'Isolation ensures concurrently executing transactions produce the same result as if they ran one after another.' },
-  { subject:'Database Management System', text:'Which key is a primary key made up of two or more columns together?', options:['Foreign Key','Composite Key','Alternate Key','Super Key'], correct:'Composite Key',
+  { subject:'Database Management System', chapter:'ER Model & Relational Model', text:'Which key is a primary key made up of two or more columns together?', options:['Foreign Key','Composite Key','Alternate Key','Super Key'], correct:'Composite Key',
     explanation:'A composite key combines two or more columns whose combined values uniquely identify a row.' },
 
-  { subject:'Object Oriented Programming', text:'Which access modifier restricts a member to only be visible within its own class?', options:['public','protected','private','static'], correct:'private',
+  { subject:'Object Oriented Programming', chapter:'OOP Concepts: Classes & Objects', text:'Which access modifier restricts a member to only be visible within its own class?', options:['public','protected','private','static'], correct:'private',
     explanation:'private members are accessible only within the defining class, not by subclasses or outside code.' },
-  { subject:'Object Oriented Programming', text:'What is the "this" keyword commonly used for?', options:['Referring to the current object instance','Declaring a static method','Creating a new class','Importing a library'], correct:'Referring to the current object instance',
+  { subject:'Object Oriented Programming', chapter:'OOP Concepts: Classes & Objects', text:'What is the "this" keyword commonly used for?', options:['Referring to the current object instance','Declaring a static method','Creating a new class','Importing a library'], correct:'Referring to the current object instance',
     explanation:'"this" refers to the instance a method was called on, useful for disambiguating fields from parameters with the same name.' },
-  { subject:'Object Oriented Programming', text:'Which relationship represents a "has-a" association rather than "is-a"?', options:['Inheritance','Composition','Polymorphism','Overriding'], correct:'Composition',
+  { subject:'Object Oriented Programming', chapter:'OOP Concepts: Classes & Objects', text:'Which relationship represents a "has-a" association rather than "is-a"?', options:['Inheritance','Composition','Polymorphism','Overriding'], correct:'Composition',
     explanation:'Composition models a "has-a" relationship (a Car has an Engine), while inheritance models "is-a" (a Car is a Vehicle).' },
 
-  { subject:'Digital Electronics', text:'Out of 8 possible input combinations, how many produce a 1 output on a 3-input AND gate?', options:['8','1','3','0'], correct:'1',
+  { subject:'Digital Electronics', chapter:'Boolean Algebra & Logic Gates', text:'Out of 8 possible input combinations, how many produce a 1 output on a 3-input AND gate?', options:['8','1','3','0'], correct:'1',
     explanation:'An AND gate outputs 1 only when ALL inputs are 1 — exactly one of the 8 combinations satisfies that.' },
-  { subject:'Digital Electronics', text:'What does a decoder circuit do?', options:['Combines multiple inputs into one output','Converts binary input into one active output line','Stores one bit of data','Amplifies a signal'], correct:'Converts binary input into one active output line',
+  { subject:'Digital Electronics', chapter:'Combinational Circuits (Adders, MUX, Decoders)', text:'What does a decoder circuit do?', options:['Combines multiple inputs into one output','Converts binary input into one active output line','Stores one bit of data','Amplifies a signal'], correct:'Converts binary input into one active output line',
     explanation:'A decoder takes n binary inputs and activates exactly one of up to 2^n output lines based on that input.' },
-  { subject:'Digital Electronics', text:'Which number system uses base 16?', options:['Binary','Octal','Decimal','Hexadecimal'], correct:'Hexadecimal',
+  { subject:'Digital Electronics', chapter:'Number Systems & Codes', text:'Which number system uses base 16?', options:['Binary','Octal','Decimal','Hexadecimal'], correct:'Hexadecimal',
     explanation:'Hexadecimal (base 16) uses digits 0-9 and A-F, commonly used to represent binary data compactly.' },
 
-  { subject:'Discrete Mathematics', text:'How many subsets does a set with 4 elements have (including the empty set)?', options:['8','16','4','12'], correct:'16',
+  { subject:'Discrete Mathematics', chapter:'Set Theory & Relations', text:'How many subsets does a set with 4 elements have (including the empty set)?', options:['8','16','4','12'], correct:'16',
     explanation:'A set with n elements has 2^n subsets; 2^4 = 16.' },
-  { subject:'Discrete Mathematics', text:'What is the negation of "P AND Q" in propositional logic?', options:['NOT P AND NOT Q','NOT P OR NOT Q','P OR Q','P AND NOT Q'], correct:'NOT P OR NOT Q',
+  { subject:'Discrete Mathematics', chapter:'Propositional & Predicate Logic', text:'What is the negation of "P AND Q" in propositional logic?', options:['NOT P AND NOT Q','NOT P OR NOT Q','P OR Q','P AND NOT Q'], correct:'NOT P OR NOT Q',
     explanation:'By De Morgan\'s Law, ¬(P ∧ Q) = ¬P ∨ ¬Q.' },
-  { subject:'Discrete Mathematics', text:'What is the sum of the first n natural numbers?', options:['n(n+1)/2','n^2','n(n-1)/2','2n'], correct:'n(n+1)/2',
+  { subject:'Discrete Mathematics', chapter:'Recurrence Relations', text:'What is the sum of the first n natural numbers?', options:['n(n+1)/2','n^2','n(n-1)/2','2n'], correct:'n(n+1)/2',
     explanation:'This is the standard closed-form formula for 1+2+...+n, provable by induction or pairing terms.' },
 
-  { subject:'Business Ethics and IPR', text:'What does "prior art" refer to in patent law?', options:['The inventor\'s previous patents','Existing knowledge/technology that predates a patent claim','A type of trademark','A licensing fee'], correct:'Existing knowledge/technology that predates a patent claim',
+  { subject:'Business Ethics and IPR', chapter:'Patent Filing Process', text:'What does "prior art" refer to in patent law?', options:['The inventor\'s previous patents','Existing knowledge/technology that predates a patent claim','A type of trademark','A licensing fee'], correct:'Existing knowledge/technology that predates a patent claim',
     explanation:'Prior art is evidence an invention was already known before the patent application, which can block or invalidate a claim.' },
-  { subject:'Business Ethics and IPR', text:'Which of these is generally NOT protectable by copyright?', options:['A song\'s melody','A novel\'s text','A mathematical formula/idea itself','Software source code'], correct:'A mathematical formula/idea itself',
+  { subject:'Business Ethics and IPR', chapter:'Copyright & Trade Secrets', text:'Which of these is generally NOT protectable by copyright?', options:['A song\'s melody','A novel\'s text','A mathematical formula/idea itself','Software source code'], correct:'A mathematical formula/idea itself',
     explanation:'Copyright protects the expression of an idea, not the underlying idea, fact, or formula itself.' },
-  { subject:'Business Ethics and IPR', text:'What is "plagiarism" primarily a violation of?', options:['Patent law','Trademark law','Academic/professional ethics (and often copyright)','Trade secret law'], correct:'Academic/professional ethics (and often copyright)',
+  { subject:'Business Ethics and IPR', chapter:'Ethical Decision-Making Frameworks', text:'What is "plagiarism" primarily a violation of?', options:['Patent law','Trademark law','Academic/professional ethics (and often copyright)','Trade secret law'], correct:'Academic/professional ethics (and often copyright)',
     explanation:'Plagiarism is presenting someone else\'s work as your own — an ethical violation, and often a copyright violation if the original is protected.' }
 ];
 const SHORT_QUESTIONS = [
-  { subject:'Data Structures and Algorithms', text:'In one sentence, what is a linked list?' },
-  { subject:'Data Structures and Algorithms', text:'In one sentence, what\'s the difference between a stack and a queue?' },
-  { subject:'Data Structures and Algorithms', text:'In one sentence, why is binary search faster than linear search?' },
+  { subject:'Data Structures and Algorithms', chapter:'Linked Lists', text:'In one sentence, what is a linked list?' },
+  { subject:'Data Structures and Algorithms', chapter:'Stacks', text:'In one sentence, what\'s the difference between a stack and a queue?' },
+  { subject:'Data Structures and Algorithms', chapter:'Arrays & Complexity Analysis', text:'In one sentence, why is binary search faster than linear search?' },
 
-  { subject:'Database Management System', text:'In one sentence, what problem does normalization solve?' },
-  { subject:'Database Management System', text:'In one sentence, what is a foreign key used for?' },
-  { subject:'Database Management System', text:'In one sentence, what does an INDEX do in a database?' },
+  { subject:'Database Management System', chapter:'Normalization (1NF–BCNF)', text:'In one sentence, what problem does normalization solve?' },
+  { subject:'Database Management System', chapter:'ER Model & Relational Model', text:'In one sentence, what is a foreign key used for?' },
+  { subject:'Database Management System', chapter:'Indexing & Query Processing', text:'In one sentence, what does an INDEX do in a database?' },
 
-  { subject:'Object Oriented Programming', text:'In one sentence, what is encapsulation?' },
-  { subject:'Object Oriented Programming', text:'In one sentence, what is inheritance?' },
-  { subject:'Object Oriented Programming', text:'In one sentence, what is polymorphism?' },
+  { subject:'Object Oriented Programming', chapter:'OOP Concepts: Classes & Objects', text:'In one sentence, what is encapsulation?' },
+  { subject:'Object Oriented Programming', chapter:'Inheritance', text:'In one sentence, what is inheritance?' },
+  { subject:'Object Oriented Programming', chapter:'Polymorphism (Overloading & Overriding)', text:'In one sentence, what is polymorphism?' },
 
-  { subject:'Digital Electronics', text:'In one sentence, what does a multiplexer do?' },
-  { subject:'Digital Electronics', text:'In one sentence, what is a flip-flop used for?' },
-  { subject:'Digital Electronics', text:'In one sentence, why is binary used in digital electronics instead of decimal?' },
+  { subject:'Digital Electronics', chapter:'Combinational Circuits (Adders, MUX, Decoders)', text:'In one sentence, what does a multiplexer do?' },
+  { subject:'Digital Electronics', chapter:'Sequential Circuits (Flip-Flops, Latches)', text:'In one sentence, what is a flip-flop used for?' },
+  { subject:'Digital Electronics', chapter:'Number Systems & Codes', text:'In one sentence, why is binary used in digital electronics instead of decimal?' },
 
-  { subject:'Discrete Mathematics', text:'In one sentence, what\'s the difference between a permutation and a combination?' },
-  { subject:'Discrete Mathematics', text:'In one sentence, what is a function in mathematics?' },
-  { subject:'Discrete Mathematics', text:'In one sentence, what defines a tree in graph theory?' },
+  { subject:'Discrete Mathematics', chapter:'Combinatorics (Permutations & Combinations)', text:'In one sentence, what\'s the difference between a permutation and a combination?' },
+  { subject:'Discrete Mathematics', chapter:'Functions', text:'In one sentence, what is a function in mathematics?' },
+  { subject:'Discrete Mathematics', chapter:'Trees (Graph-Theoretic)', text:'In one sentence, what defines a tree in graph theory?' },
 
-  { subject:'Business Ethics and IPR', text:'In one sentence, what\'s the difference between a patent and a copyright?' },
-  { subject:'Business Ethics and IPR', text:'In one sentence, what is corporate social responsibility?' },
-  { subject:'Business Ethics and IPR', text:'In one sentence, what is a trade secret?' }
+  { subject:'Business Ethics and IPR', chapter:'Introduction to IP: Patents, Copyrights, Trademarks', text:'In one sentence, what\'s the difference between a patent and a copyright?' },
+  { subject:'Business Ethics and IPR', chapter:'Corporate Social Responsibility', text:'In one sentence, what is corporate social responsibility?' },
+  { subject:'Business Ethics and IPR', chapter:'Copyright & Trade Secrets', text:'In one sentence, what is a trade secret?' }
 ];
 const LONG_QUESTIONS = [
-  { subject:'Data Structures and Algorithms', text:'Explain why a Binary Search Tree gives faster lookups than an unsorted array. Use an example.' },
-  { subject:'Data Structures and Algorithms', text:'Compare arrays and linked lists in terms of memory layout, insertion cost, and access cost.' },
-  { subject:'Data Structures and Algorithms', text:'Describe how a hash table resolves collisions using chaining, with an example.' },
+  { subject:'Data Structures and Algorithms', chapter:'Trees & Binary Search Trees', text:'Explain why a Binary Search Tree gives faster lookups than an unsorted array. Use an example.' },
+  { subject:'Data Structures and Algorithms', chapter:'Linked Lists', text:'Compare arrays and linked lists in terms of memory layout, insertion cost, and access cost.' },
+  { subject:'Data Structures and Algorithms', chapter:'Hashing', text:'Describe how a hash table resolves collisions using chaining, with an example.' },
 
-  { subject:'Database Management System', text:'Explain the difference between a primary key and a foreign key, with an example of two related tables.' },
-  { subject:'Database Management System', text:'Explain the ACID properties of a database transaction with a real-world example for each.' },
-  { subject:'Database Management System', text:'Walk through normalizing an unnormalized student-course table up to 3NF.' },
+  { subject:'Database Management System', chapter:'ER Model & Relational Model', text:'Explain the difference between a primary key and a foreign key, with an example of two related tables.' },
+  { subject:'Database Management System', chapter:'Transactions & Concurrency Control', text:'Explain the ACID properties of a database transaction with a real-world example for each.' },
+  { subject:'Database Management System', chapter:'Normalization (1NF–BCNF)', text:'Walk through normalizing an unnormalized student-course table up to 3NF.' },
 
-  { subject:'Object Oriented Programming', text:'Explain the difference between method overloading and method overriding, with an example of each.' },
-  { subject:'Object Oriented Programming', text:'Explain all four pillars of OOP (encapsulation, inheritance, polymorphism, abstraction) with one example each.' },
-  { subject:'Object Oriented Programming', text:'Discuss the trade-offs between composition and inheritance for code reuse.' },
+  { subject:'Object Oriented Programming', chapter:'Polymorphism (Overloading & Overriding)', text:'Explain the difference between method overloading and method overriding, with an example of each.' },
+  { subject:'Object Oriented Programming', chapter:'OOP Concepts: Classes & Objects', text:'Explain all four pillars of OOP (encapsulation, inheritance, polymorphism, abstraction) with one example each.' },
+  { subject:'Object Oriented Programming', chapter:'Inheritance', text:'Discuss the trade-offs between composition and inheritance for code reuse.' },
 
-  { subject:'Digital Electronics', text:'Explain why NAND is called a universal gate, and how you could build a NOT gate using only a NAND gate.' },
-  { subject:'Digital Electronics', text:'Explain the difference between combinational and sequential circuits, with one example of each.' },
-  { subject:'Digital Electronics', text:'Describe how a Karnaugh map simplifies a Boolean expression, with a small example.' },
+  { subject:'Digital Electronics', chapter:'Boolean Algebra & Logic Gates', text:'Explain why NAND is called a universal gate, and how you could build a NOT gate using only a NAND gate.' },
+  { subject:'Digital Electronics', chapter:'Sequential Circuits (Flip-Flops, Latches)', text:'Explain the difference between combinational and sequential circuits, with one example of each.' },
+  { subject:'Digital Electronics', chapter:'Karnaugh Maps & Minimization', text:'Describe how a Karnaugh map simplifies a Boolean expression, with a small example.' },
 
-  { subject:'Discrete Mathematics', text:'Explain what makes a graph a tree, and give one real-world example of a tree structure.' },
-  { subject:'Discrete Mathematics', text:'Explain the Pigeonhole Principle and give a real-world example where it applies.' },
-  { subject:'Discrete Mathematics', text:'Describe the difference between a graph and a tree, and explain why every tree is a graph but not vice versa.' },
+  { subject:'Discrete Mathematics', chapter:'Trees (Graph-Theoretic)', text:'Explain what makes a graph a tree, and give one real-world example of a tree structure.' },
+  { subject:'Discrete Mathematics', chapter:'Combinatorics (Permutations & Combinations)', text:'Explain the Pigeonhole Principle and give a real-world example where it applies.' },
+  { subject:'Discrete Mathematics', chapter:'Graph Theory Basics', text:'Describe the difference between a graph and a tree, and explain why every tree is a graph but not vice versa.' },
 
-  { subject:'Business Ethics and IPR', text:'Explain why a company might choose to protect an invention as a trade secret instead of filing a patent.' },
-  { subject:'Business Ethics and IPR', text:'Discuss how patents, copyrights, and trademarks differ in what they protect and how long protection lasts.' },
-  { subject:'Business Ethics and IPR', text:'Explain an ethical dilemma a software company might face around user data privacy, and how CSR principles could guide the decision.' }
+  { subject:'Business Ethics and IPR', chapter:'Patent Filing Process', text:'Explain why a company might choose to protect an invention as a trade secret instead of filing a patent.' },
+  { subject:'Business Ethics and IPR', chapter:'Introduction to IP: Patents, Copyrights, Trademarks', text:'Discuss how patents, copyrights, and trademarks differ in what they protect and how long protection lasts.' },
+  { subject:'Business Ethics and IPR', chapter:'Ethical Decision-Making Frameworks', text:'Explain an ethical dilemma a software company might face around user data privacy, and how CSR principles could guide the decision.' }
 ];
 function quizSubject(){ return document.getElementById('quizSubjectSelect').value; }
 function quizCount(){
@@ -5951,6 +6557,29 @@ function buildPool(bank, subject, count){
     pool = pool.concat(shuffleArr(matching));
   }
   return pool.slice(0, count);
+}
+
+// AI-generated questions targeting the student's actual priority chapters (real Readiness
+// data), falling back to the hardcoded bank if the API fails or the student has no chapters
+// left to prioritize (nothing weak/uncovered yet).
+async function buildAIPool(bank, type, subject, count){
+  let chapters = computeStudyPriority(subject).map(c => c.chapter).slice(0, Math.max(3, count));
+  if(!chapters.length){
+    const course = COURSE_CHAPTERS[subject];
+    chapters = course ? course.chapters.slice(0, count) : [];
+  }
+  if(!chapters.length) return buildPool(bank, subject, count);
+  try{
+    const resp = await fetch('/.netlify/functions/generate-quiz', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ subject, chapters, type, count })
+    });
+    if(!resp.ok) return buildPool(bank, subject, count);
+    const data = await resp.json();
+    bumpTokenStat('generate-quiz', data.usage);
+    if(!Array.isArray(data.questions) || !data.questions.length) return buildPool(bank, subject, count);
+    return data.questions.map(q => Object.assign({ subject }, q));
+  } catch(e){ return buildPool(bank, subject, count); }
 }
 
 function attachMic(btn, field){
@@ -6025,6 +6654,7 @@ function selectMcqOption(optBtn, opt, q){
   mcqAnsweredCurrent = true;
   const isCorrect = opt === q.correct;
   if(isCorrect) mcqCorrectCount++;
+  logTopicActivity(q.subject, q.chapter, 'quiz', isCorrect);
 
   document.querySelectorAll('#mcqOptions .quiz-option').forEach(b=>{
     b.style.pointerEvents = 'none';
@@ -6034,7 +6664,7 @@ function selectMcqOption(optBtn, opt, q){
 
   const fb = document.getElementById('mcqFeedback');
   fb.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'incorrect');
-  fb.innerHTML = isCorrect ? '<b>Correct!</b>' : `<b>Not quite.</b> ${q.explanation}`;
+  fb.innerHTML = isCorrect ? '<b>Correct!</b>' : `<b>Not quite.</b> ${escapeHtml(q.explanation)}`;
 
   document.getElementById('mcqNextBtn').disabled = false;
 }
@@ -6066,16 +6696,21 @@ document.getElementById('mcqNextBtn').addEventListener('click', ()=>{
     showMcqScore();
   }
 });
-function rebuildAllPools(){
-  mcqPool = buildPool(MCQ_QUESTIONS, quizSubject(), quizCount());
-  mcqIndex = 0; mcqCorrectCount = 0;
-  renderMcqQuestion();
-  shortPool = buildPool(SHORT_QUESTIONS, quizSubject(), quizCount());
-  shortIndex = 0;
-  renderShortQuestion();
-  longPool = buildPool(LONG_QUESTIONS, quizSubject(), quizCount());
-  longIndex = 0;
-  renderLongQuestion();
+async function rebuildAllPools(){
+  const subject = quizSubject(), count = quizCount();
+  mcqIndex = 0; mcqCorrectCount = 0; shortIndex = 0; longIndex = 0;
+  ['mcqQuestionText','shortQuestionText','longQuestionText'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = 'Generating questions…';
+  });
+  const [mcq, short, long] = await Promise.all([
+    buildAIPool(MCQ_QUESTIONS, 'mcq', subject, count),
+    buildAIPool(SHORT_QUESTIONS, 'short', subject, count),
+    buildAIPool(LONG_QUESTIONS, 'long', subject, count)
+  ]);
+  mcqPool = mcq; renderMcqQuestion();
+  shortPool = short; renderShortQuestion();
+  longPool = long; renderLongQuestion();
 }
 document.getElementById('quizSubjectSelect').addEventListener('change', rebuildAllPools);
 document.getElementById('quizCountInput').addEventListener('change', rebuildAllPools);
@@ -6108,6 +6743,7 @@ function renderLongQuestion(){
 }
 renderShortQuestion();
 renderLongQuestion();
+rebuildAllPools(); // upgrade the hardcoded starting pools to AI-generated, priority-targeted ones
 
 attachMic(document.getElementById('shortMicBtn'), document.getElementById('shortAnswerField'));
 attachMic(document.getElementById('longMicBtn'), document.getElementById('longAnswerField'));
@@ -6171,12 +6807,13 @@ async function checkWrittenAnswer(kind){
 
   bumpStat(cfg.statKey, 1);
   if(result.verdict === 'correct') bumpStat(cfg.statKey + 'Correct', 1);
+  logTopicActivity(quizSubject(), pool[idx].chapter, kind, result.verdict !== 'incorrect');
   renderActivityStats();
 
   field.disabled = true;
   fb.className = 'quiz-feedback show ' + (result.verdict === 'correct' ? 'correct' : 'incorrect');
   const tag = result.verdict === 'correct' ? '<b>Correct.</b> ' : result.verdict === 'partial' ? '<b>Partially right.</b> ' : '<b>Not quite.</b> ';
-  fb.innerHTML = tag + result.feedback;
+  fb.innerHTML = tag + escapeHtml(result.feedback);
 
   btn.textContent = isLast ? 'Finish' : 'Next Question';
   btn.dataset.phase = 'next';
@@ -6272,19 +6909,36 @@ document.getElementById('bsSubmitBtn').addEventListener('click', ()=>{
   bsFinish();
 });
 
-function bsFinish(){
+async function bsFinish(){
   const t = BRAINSTORM_TOPICS[bsTopicIndex];
   const raw = document.getElementById('bsInput').value.split(/\n|,/).map(s=>s.trim().toLowerCase()).filter(s=>s.length >= 3);
   const validIdeas = [...new Set(raw)];
-  const matched = validIdeas.filter(idea => t.seedIdeas.some(seed => idea.includes(seed) || seed.includes(idea)));
-  const score = validIdeas.length * 10 + matched.length * 15;
 
   bsShowStage('bsStageResult');
+  document.getElementById('bsBreakdown').innerHTML = 'Scoring your ideas…';
+
+  let validCount = 0, feedback = '';
+  if(validIdeas.length){
+    try{
+      const resp = await fetch('/.netlify/functions/grade-brainstorm', {
+        method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ topic: t.topic, prompt: t.prompt, ideas: validIdeas })
+      });
+      if(resp.ok){
+        const data = await resp.json();
+        bumpTokenStat('grade-brainstorm', data.usage);
+        if(typeof data.validCount === 'number'){ validCount = data.validCount; feedback = data.feedback || ''; }
+      }
+    } catch(e){ /* offline — score on submission count alone below */ }
+  }
+  const score = validIdeas.length * 10 + validCount * 15;
+
   document.getElementById('bsScoreNum').textContent = score;
   const ringDeg = Math.min(score / 150, 1) * 360;
   document.getElementById('bsScoreRing').style.background = `conic-gradient(var(--green) ${ringDeg}deg, var(--cream-2) ${ringDeg}deg 360deg)`;
-  document.getElementById('bsBreakdown').innerHTML =
-    `<b>${validIdeas.length}</b> ideas submitted · <b>${matched.length}</b> matched common answers<br>+10 per idea, +15 bonus per match`;
+  document.getElementById('bsBreakdown').innerHTML = feedback
+    ? `<b>${validIdeas.length}</b> ideas submitted · <b>${validCount}</b> judged valid by Forge<br>+10 per idea, +15 bonus per valid idea<br><span style="display:block; margin-top:8px;">${escapeHtml(feedback)}</span>`
+    : `<b>${validIdeas.length}</b> ideas submitted · <b>${validCount}</b> judged valid<br>+10 per idea, +15 bonus per valid idea<br>(Couldn't reach Forge AI to grade — scored on submission count only)`;
 
   const sparkWrap = document.getElementById('bsSparkles');
   sparkWrap.innerHTML = '';
@@ -6617,6 +7271,20 @@ new MutationObserver(()=>{
 
 
 
+  <!-- TOPIC STUDY MODAL -->
+  <div class="topic-modal-backdrop" id="topicModalBackdrop"></div>
+  <div class="topic-modal panel" id="topicModal">
+    <div class="panel-head">
+      <h2 id="topicModalTitle">Chapter</h2>
+      <a href="#" id="topicModalClose">✕ Close</a>
+    </div>
+    <span class="topic-modal-status-chip" id="topicModalStatusChip"></span>
+    <div id="topicModalVideos">
+      <p class="tt-sub">Loading videos…</p>
+    </div>
+    <div id="topicModalActivity"></div>
+  </div>
+
   <!-- MORE BOTTOM SHEET -->
   <div class="more-sheet-backdrop" id="moreSheetBackdrop"></div>
   <div class="more-sheet" id="moreSheet">
@@ -6661,5 +7329,6 @@ new MutationObserver(()=>{
       <span>More</span>
     </a>
   </nav>
+
 </body>
 </html>
