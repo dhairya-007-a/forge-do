@@ -4882,7 +4882,7 @@ function bumpTokenStat(feature, usage){
 /* --- Topic study modal: video picker (find-videos.js) + real existing data for one chapter --- */
 function topicVideoCardHtml(video, isBest){
   return `<a class="topic-video-card${isBest ? ' best' : ''}" href="https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}" target="_blank" rel="noopener">
-    <img src="${video.thumbnail}" alt="">
+    <img src="${escapeHtml(video.thumbnail)}" alt="">
     <div class="tv-title">${escapeHtml(video.title)}</div>
     <div class="tv-meta">${escapeHtml(video.channelTitle)}${isBest ? ' · Best pick' : ''}</div>
   </a>`;
