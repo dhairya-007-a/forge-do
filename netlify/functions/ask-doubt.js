@@ -192,11 +192,13 @@ respond with:
       parsed.mainTopics = parsed.mainTopics
         .filter(t => t && typeof t.chapter === 'string' && validChapters.includes(t.chapter) && typeof t.why === 'string')
         .slice(0, 8);
+      if(!parsed.mainTopics.length) parsed.mainTopics = null;
     } else {
       parsed.mainTopics = null;
     }
     if(parsed.type === 'course' && Array.isArray(parsed.practiceQuestions)){
       parsed.practiceQuestions = parsed.practiceQuestions.filter(q => typeof q === 'string' && q.trim()).slice(0, 5);
+      if(!parsed.practiceQuestions.length) parsed.practiceQuestions = null;
     } else {
       parsed.practiceQuestions = null;
     }
