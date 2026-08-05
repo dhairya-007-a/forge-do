@@ -372,6 +372,10 @@ document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
    static page, same threat model as AUTH_HASH above), just enough to stop a
    casual "found the URL" request from working. */
 const ADMIN_API_KEY = '3c1ef3542cbdfa3aea177467fe892b59734572298a3d557a';
+/* Netlify edge Basic-Auth credential (see netlify.toml) -- sent explicitly rather than
+   relying on the browser to reuse a cached credential across this page and the function
+   URLs, since that depends on realm-matching behavior this project hasn't verified live. */
+const ADMIN_BASIC_AUTH = 'Basic ' + btoa('forgeadmin:gNCIzVjLgkhBZ9uK');
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -398,7 +402,7 @@ async function loadAccounts(){
   try{
     const resp = await fetch('/.netlify/functions/list-accounts', {
       method: 'POST',
-      headers: { 'x-admin-key': ADMIN_API_KEY }
+      headers: { 'x-admin-key': ADMIN_API_KEY, 'Authorization': ADMIN_BASIC_AUTH }
     });
     const result = await resp.json();
     if(!resp.ok) throw new Error(result.error || 'Failed to load accounts');
@@ -428,7 +432,7 @@ async function terminateAccount(email){
   try{
     const resp = await fetch('/.netlify/functions/delete-account', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-admin-key': ADMIN_API_KEY },
+      headers: { 'content-type': 'application/json', 'x-admin-key': ADMIN_API_KEY, 'Authorization': ADMIN_BASIC_AUTH },
       body: JSON.stringify({ email })
     });
     const result = await resp.json();

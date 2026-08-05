@@ -7,3 +7,24 @@
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
+
+# Real, edge-enforced admin gate -- unlike the ADMIN_API_KEY header check in
+# list-accounts.js/delete-account.js (which is app-level and visible in page
+# source), this runs before Netlify even serves the page or invokes the
+# function, so a leaked ADMIN_API_KEY alone can't reach these paths. Only
+# verifiable after a real Netlify deploy -- local-server.js has no edge layer
+# to enforce this locally.
+[[headers]]
+  for = "/admin-dashboard.html"
+  [headers.values]
+    Basic-Auth = "forgeadmin:gNCIzVjLgkhBZ9uK"
+
+[[headers]]
+  for = "/.netlify/functions/list-accounts"
+  [headers.values]
+    Basic-Auth = "forgeadmin:gNCIzVjLgkhBZ9uK"
+
+[[headers]]
+  for = "/.netlify/functions/delete-account"
+  [headers.values]
+    Basic-Auth = "forgeadmin:gNCIzVjLgkhBZ9uK"
