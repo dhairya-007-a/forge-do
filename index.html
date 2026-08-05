@@ -530,6 +530,7 @@
   }
   .side-nav{ display:flex; flex-direction:column; gap:6px; flex:1; align-items:center; width:100%; }
   .side-nav a{
+    position:relative;
     width:104px; padding:8px 4px 9px; border-radius:14px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
     color:var(--ink-soft); text-decoration:none;
@@ -537,6 +538,11 @@
   }
   .side-nav a svg{ width:19px; height:19px; flex-shrink:0; }
   .nav-label{ font-family:'Inter'; font-size:9.5px; font-weight:600; text-align:center; line-height:1.15; letter-spacing:0.01em; }
+  .nav-beta-tag{
+    font-family:'Inter'; font-size:7px; font-weight:700; letter-spacing:0.04em;
+    background:var(--pink); color:var(--white); border-radius:5px; padding:1px 4px;
+    position:absolute; top:2px; right:2px;
+  }
   .side-nav a:hover{ background:var(--cream-2); color:var(--ink); transform:translateY(-2px) scale(1.04); }
   .side-nav a:active{ transform:scale(.94); }
   .side-nav a.active{ background:var(--ink); color:var(--yellow); }
@@ -2416,11 +2422,13 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2 1.8-2 3.5"/><path d="M12 17h.01"/></svg>
         <span class="nav-label">Quiz</span>
       </a>
-      <a data-target="brainstorm" title="Brainstorm">
+      <a data-target="brainstorm" title="Brainstorm (Beta)">
+        <span class="nav-beta-tag">BETA</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
         <span class="nav-label">Brainstorm</span>
       </a>
-      <a data-target="viva" title="Viva Prep">
+      <a data-target="viva" title="Viva Prep (Beta)">
+        <span class="nav-beta-tag">BETA</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
         <span class="nav-label">Viva Prep</span>
       </a>
