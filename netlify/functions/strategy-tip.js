@@ -1,6 +1,9 @@
 // Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/strategy-tip with { mode: "weekly" | "backlog", ... }
+// The frontend calls POST /.netlify/functions/strategy-tip with { mode: "weekly" | "backlog" | "studyplan", ... }
 // and never sees the key. Same pipeline shape as generate-note.js / ask-doubt.js / assignment-tip.js.
+// studyplan mode: the chapter PRIORITY ORDER and day allocation are computed client-side (real data,
+// deterministic, free) — this function only turns that already-decided schedule into an encouraging
+// day-by-day narrative. The model does not decide what to study, only how to say it.
 
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
@@ -22,7 +25,33 @@ exports.handler = async function(event){
   const today = new Date().toISOString().slice(0,10);
   let systemPrompt;
 
-  if(body.mode === 'backlog'){
+  if(body.mode === 'studyplan'){
+    const { days, daysRemaining, subject } = body;
+    if(!Array.isArray(days) || !days.length){
+      return { statusCode: 400, body: JSON.stringify({ error: 'days is required and must be non-empty for studyplan mode' }) };
+    }
+    const scheduleText = days.map(d => {
+      const items = d.items.map(it => `${it.chapter}${it.subject ? ' (' + it.subject + ')' : ''} — ${it.status === 'weak' ? 'previously got this wrong, needs fixing' : it.status === 'learning' ? 'asked about this but not tested on it yet' : 'not covered yet'}`).join('; ');
+      return `Day ${d.day}: ${items}`;
+    }).join('\n');
+    systemPrompt = `You are Forge, a study-planning assistant for a B.Tech Computer Engineering student.
+Today's date is ${today}. ${subject ? `Subject: ${subject}. ` : 'This plan covers multiple subjects with different exam dates. '}${daysRemaining} day(s) remain until the exam(s).
+
+The chapter order and day-by-day allocation below has ALREADY been decided by the app based on the student's
+real quiz/doubt history — do not change the order or reassign chapters to different days. Your only job is to
+write it up as an encouraging, concrete, easy-to-follow day-by-day plan.
+
+Schedule (already decided, follow it exactly):
+${scheduleText}
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this shape:
+{"plan": "string"}
+"plan" must be formatted as one line per day, in this exact style, separated by real newlines, nothing else —
+no intro, no summary:
+Day <N>: <1-2 sentences: what to study today and why it's prioritized (in plain words, not jargon like
+"weak chapter"), plus one concrete study tactic for that day (e.g. practice problems, flashcards, re-reading
+notes)>`;
+  } else if(body.mode === 'backlog'){
     const { backlogSubject, attempt, examDate } = body;
     if(!backlogSubject || !examDate){
       return { statusCode: 400, body: JSON.stringify({ error: 'backlogSubject and examDate are required for backlog mode' }) };
@@ -72,11 +101,11 @@ tip instead.`;
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 350,
+        max_tokens: body.mode === 'studyplan' ? 900 : 350,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: body.mode === 'backlog' ? 'How do I cover this?' : 'What should I focus on this week?' }
+          { role: 'user', content: body.mode === 'studyplan' ? 'Write up my study plan.' : body.mode === 'backlog' ? 'How do I cover this?' : 'What should I focus on this week?' }
         ]
       })
     });
@@ -98,8 +127,9 @@ tip instead.`;
       return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
     }
 
-    if(!parsed.tip){
-      return { statusCode: 200, body: JSON.stringify({ tip: null, usage: data.usage || null }) };
+    const resultKey = body.mode === 'studyplan' ? 'plan' : 'tip';
+    if(!parsed[resultKey]){
+      return { statusCode: 200, body: JSON.stringify({ [resultKey]: null, usage: data.usage || null }) };
     }
 
     parsed.usage = data.usage || null;
