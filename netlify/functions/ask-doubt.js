@@ -28,7 +28,7 @@ function normalizeSubject(subject){
   return SUBJECT_ALIASES[subject] || subject;
 }
 
-// Mirrors COURSE_CHAPTERS in student-dashboard.html — kept in sync manually since this is a
+// Mirrors COURSE_CHAPTERS in index.html — kept in sync manually since this is a
 // static site with no shared module system. Used to (a) tell the model the real chapter names
 // per subject so it can classify a doubt directly, and (b) validate its answer server-side
 // rather than trusting it blindly (the model doesn't always follow instructions exactly).

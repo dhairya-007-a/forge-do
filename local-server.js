@@ -49,4 +49,4 @@ http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath)] || 'application/octet-stream' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`local dev server: http://localhost:${PORT}/student-dashboard.html`));
+}).listen(PORT, () => console.log(`local dev server: http://localhost:${PORT}/`));
