@@ -1,3 +1,6 @@
 {
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "@netlify/blobs": "^10.7.12"
+  }
 }
