@@ -3582,7 +3582,7 @@ window.addEventListener('load', ()=>{
   }
 });
 
-document.getElementById('onboardingForm').addEventListener('submit', (e)=>{
+document.getElementById('onboardingForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const form = e.target;
   const profile = {
@@ -3596,9 +3596,27 @@ document.getElementById('onboardingForm').addEventListener('submit', (e)=>{
     level: form.level.value,
     college: form.college.value.trim()
   };
-  forgeStore.setItem('forge-onboarded', 'true');
-  forgeStore.setItem('forge-profile', JSON.stringify(profile));
-  applyProfile(profile);
+
+  let restored = false;
+  try{
+    const resp = await fetch('/.netlify/functions/restore-account', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: profile.email })
+    });
+    const result = await resp.json();
+    if(result && result.found && result.data){
+      Object.keys(result.data).forEach(key => forgeStore.setItem(key, result.data[key]));
+      restored = true;
+    }
+  } catch(err){ /* Blobs unreachable — fall through and treat as a new signup */ }
+
+  if(!restored){
+    forgeStore.setItem('forge-onboarded', 'true');
+    forgeStore.setItem('forge-profile', JSON.stringify(profile));
+  }
+
+  applyProfile(JSON.parse(forgeStore.getItem('forge-profile') || 'null') || profile);
 
   const survey = document.getElementById('onboardingSurvey');
   survey.classList.add('splash-out');
