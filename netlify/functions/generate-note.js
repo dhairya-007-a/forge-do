@@ -2,6 +2,8 @@
 // The frontend calls POST /.netlify/functions/generate-note with { topic, tier }
 // and never sees the key.
 
+const { callGroq } = require('./_groq-client');
+
 const MODEL_BY_TIER = {
   tier1: 'llama-3.3-70b-versatile',
   tier2: 'llama-3.3-70b-versatile'
@@ -10,11 +12,6 @@ const MODEL_BY_TIER = {
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
-
-  const apiKey = process.env.GROQ_API_KEY;
-  if(!apiKey){
-    return { statusCode: 500, body: JSON.stringify({ error: 'GROQ_API_KEY not configured on the server' }) };
   }
 
   let topic, tier;
@@ -53,28 +50,19 @@ respond with:
 {"title": null, "sections": []}`;
 
   try{
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'authorization': `Bearer ${apiKey}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: MODEL_BY_TIER[tier],
-        max_tokens: 700,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: topic }
-        ]
-      })
+    const { ok, status, data } = await callGroq({
+      model: MODEL_BY_TIER[tier],
+      max_tokens: 700,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: topic }
+      ]
     });
 
-    const data = await resp.json();
-
-    if(!resp.ok){
+    if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: resp.status, body: JSON.stringify({ error: message }) };
+      return { statusCode: status, body: JSON.stringify({ error: message }) };
     }
 
     if(data.usage) console.log('[generate-note] tokens:', data.usage);
