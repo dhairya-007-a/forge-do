@@ -5,15 +5,16 @@
 // then YouTube search.list finds 5 candidates, then videos.list pulls view counts so
 // "best" can mean highest-viewed rather than just YouTube's default relevance order.
 
+const { callGroq } = require('./_groq-client');
+
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  const groqKey = process.env.GROQ_API_KEY;
   const ytKey = process.env.YOUTUBE_API_KEY;
-  if(!groqKey || !ytKey){
-    return { statusCode: 500, body: JSON.stringify({ videos: [], bestVideoId: null, error: 'API key not configured on the server' }) };
+  if(!ytKey){
+    return { statusCode: 500, body: JSON.stringify({ videos: [], bestVideoId: null, error: 'YOUTUBE_API_KEY not configured on the server' }) };
   }
 
   let subject, chapter;
@@ -33,22 +34,19 @@ exports.handler = async function(event){
   let query = `${chapter} ${subject} explained`;
   let groqUsage = null;
   try{
-    const phraseResp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'authorization': `Bearer ${groqKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 30,
-        messages: [
-          { role: 'system', content: 'You write short, effective YouTube search queries for B.Tech Computer Engineering study topics. Respond with ONLY the search query text, nothing else — no quotes, no punctuation, no explanation.' },
-          { role: 'user', content: `Topic: "${chapter}" from the subject "${subject}". Write one good YouTube search query for a student who wants to learn this from scratch.` }
-        ]
-      })
+    const { ok, data: phraseData } = await callGroq({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 30,
+      messages: [
+        { role: 'system', content: 'You write short, effective YouTube search queries for B.Tech Computer Engineering study topics. Respond with ONLY the search query text, nothing else — no quotes, no punctuation, no explanation.' },
+        { role: 'user', content: `Topic: "${chapter}" from the subject "${subject}". Write one good YouTube search query for a student who wants to learn this from scratch.` }
+      ]
     });
-    const phraseData = await phraseResp.json();
-    if(phraseData.usage){ console.log('[find-videos] groq tokens:', phraseData.usage); groqUsage = phraseData.usage; }
-    const text = phraseData.choices && phraseData.choices[0] && phraseData.choices[0].message && phraseData.choices[0].message.content;
-    if(text && text.trim()) query = text.trim();
+    if(ok){
+      if(phraseData.usage){ console.log('[find-videos] groq tokens:', phraseData.usage); groqUsage = phraseData.usage; }
+      const text = phraseData.choices && phraseData.choices[0] && phraseData.choices[0].message && phraseData.choices[0].message.content;
+      if(text && text.trim()) query = text.trim();
+    }
   } catch(e){ /* keep the fallback query built above */ }
 
   // relevanceLanguage biases YouTube's ranking toward English results — a hint, not a hard
