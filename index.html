@@ -3494,6 +3494,7 @@ function applyProfile(profile){
   const chipRole = document.querySelector('.profile-chip .role');
   if(chipRole && profile.level && profile.course) chipRole.textContent = `${profile.level} · ${profile.course}`;
   renderGreeting();
+  if(typeof renderLeaderboard === 'function') renderLeaderboard();
 }
 
 /* ---------- TIME-OF-DAY GREETING ---------- */
