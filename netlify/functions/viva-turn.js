@@ -5,6 +5,8 @@
 // natural follow-up — one continuous conversation, same pipeline shape as the
 // other Forge functions (ask-doubt.js, grade-answer.js).
 
+const { callGroq } = require('./_groq-client');
+
 const MODEL_BY_TIER = {
   tier1: 'llama-3.3-70b-versatile'
 };
@@ -12,11 +14,6 @@ const MODEL_BY_TIER = {
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
-
-  const apiKey = process.env.GROQ_API_KEY;
-  if(!apiKey){
-    return { statusCode: 500, body: JSON.stringify({ error: 'GROQ_API_KEY not configured on the server' }) };
   }
 
   let subject, history;
@@ -57,28 +54,19 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
   opening question, when there is no previous answer yet to grade.`;
 
   try{
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'authorization': `Bearer ${apiKey}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: MODEL_BY_TIER.tier1,
-        max_tokens: 400,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...(isOpening ? [{ role: 'user', content: 'Begin the viva.' }] : cappedHistory)
-        ]
-      })
+    const { ok, status, data } = await callGroq({
+      model: MODEL_BY_TIER.tier1,
+      max_tokens: 400,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...(isOpening ? [{ role: 'user', content: 'Begin the viva.' }] : cappedHistory)
+      ]
     });
 
-    const data = await resp.json();
-
-    if(!resp.ok){
+    if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: resp.status, body: JSON.stringify({ error: message }) };
+      return { statusCode: status, body: JSON.stringify({ error: message }) };
     }
 
     if(data.usage) console.log('[viva-turn] tokens:', data.usage);
