@@ -5,14 +5,11 @@
 // deterministic, free) — this function only turns that already-decided schedule into an encouraging
 // day-by-day narrative. The model does not decide what to study, only how to say it.
 
+const { callGroq } = require('./_groq-client');
+
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
-
-  const apiKey = process.env.GROQ_API_KEY;
-  if(!apiKey){
-    return { statusCode: 500, body: JSON.stringify({ error: 'GROQ_API_KEY not configured on the server' }) };
   }
 
   let body;
@@ -93,28 +90,19 @@ tip instead.`;
   }
 
   try{
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'authorization': `Bearer ${apiKey}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: body.mode === 'studyplan' ? 900 : 350,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: body.mode === 'studyplan' ? 'Write up my study plan.' : body.mode === 'backlog' ? 'How do I cover this?' : 'What should I focus on this week?' }
-        ]
-      })
+    const { ok, status, data } = await callGroq({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: body.mode === 'studyplan' ? 900 : 350,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: body.mode === 'studyplan' ? 'Write up my study plan.' : body.mode === 'backlog' ? 'How do I cover this?' : 'What should I focus on this week?' }
+      ]
     });
 
-    const data = await resp.json();
-
-    if(!resp.ok){
+    if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: resp.status, body: JSON.stringify({ error: message }) };
+      return { statusCode: status, body: JSON.stringify({ error: message }) };
     }
 
     if(data.usage) console.log('[strategy-tip] tokens:', data.usage);
