@@ -10,7 +10,7 @@ const FUNCTIONS_DIR = path.join(ROOT, 'netlify', 'functions');
 const PORT = 8888;
 
 for (const line of fs.readFileSync(path.join(ROOT, '.env'), 'utf8').split('\n')) {
-  const m = line.match(/^([A-Z_]+)=(.*)$/);
+  const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
   if (m) process.env[m[1]] = m[2];
 }
 
@@ -32,7 +32,7 @@ http.createServer(async (req, res) => {
       try {
         delete require.cache[require.resolve(fnPath)];
         const { handler } = require(fnPath);
-        const result = await handler({ httpMethod: req.method, body });
+        const result = await handler({ httpMethod: req.method, headers: req.headers, body });
         res.writeHead(result.statusCode, { 'Content-Type': 'application/json' });
         res.end(result.body);
       } catch (e) {
