@@ -2,14 +2,11 @@
 // The frontend calls POST /.netlify/functions/assignment-tip with { assignments }
 // and never sees the key. Same pipeline shape as generate-note.js / ask-doubt.js.
 
+const { callGroq } = require('./_groq-client');
+
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
-
-  const apiKey = process.env.GROQ_API_KEY;
-  if(!apiKey){
-    return { statusCode: 500, body: JSON.stringify({ error: 'GROQ_API_KEY not configured on the server' }) };
   }
 
   let assignments;
@@ -40,28 +37,19 @@ due, not just alphabetically), and one concrete piece of advice for tackling it 
 to the actual assignments listed, not generic advice.`;
 
   try{
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'authorization': `Bearer ${apiKey}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 300,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'What should I prioritize?' }
-        ]
-      })
+    const { ok, status, data } = await callGroq({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 300,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: 'What should I prioritize?' }
+      ]
     });
 
-    const data = await resp.json();
-
-    if(!resp.ok){
+    if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: resp.status, body: JSON.stringify({ error: message }) };
+      return { statusCode: status, body: JSON.stringify({ error: message }) };
     }
 
     if(data.usage) console.log('[assignment-tip] tokens:', data.usage);
