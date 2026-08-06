@@ -1,30 +1,25 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/assignment-tip with { assignments }
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/assignment-tip with { assignments }
 // and never sees the key. Same pipeline shape as generate-note.js / ask-doubt.js.
 
 const { callGroq } = require('./_groq-client');
 const { checkRateLimit } = require('./_rate-limit');
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let assignments;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    assignments = Array.isArray(body.assignments) ? body.assignments : [];
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const assignments = Array.isArray(body.assignments) ? body.assignments : [];
 
   if(!assignments.length){
-    return { statusCode: 400, body: JSON.stringify({ error: 'assignments is required and must be non-empty' }) };
+    return res.status(400).json({ error: 'assignments is required and must be non-empty' });
   }
 
   const today = new Date().toISOString().slice(0,10);
@@ -55,7 +50,7 @@ to the actual assignments listed, not generic advice.`;
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[assignment-tip] tokens:', data.usage);
@@ -65,16 +60,16 @@ to the actual assignments listed, not generic advice.`;
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     if(!parsed.tip){
-      return { statusCode: 200, body: JSON.stringify({ tip: null, usage: data.usage || null }) };
+      return res.status(200).json({ tip: null, usage: data.usage || null });
     }
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
