@@ -1,5 +1,5 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/generate-note with { topic, tier }
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/generate-note with { topic, tier }
 // and never sees the key.
 
 const { callGroq } = require('./_groq-client');
@@ -10,27 +10,22 @@ const MODEL_BY_TIER = {
   tier2: 'llama-3.3-70b-versatile'
 };
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let topic, tier;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    topic = (body.topic || '').trim();
-    tier = MODEL_BY_TIER[body.tier] ? body.tier : 'tier1';
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const topic = (body.topic || '').trim();
+  const tier = MODEL_BY_TIER[body.tier] ? body.tier : 'tier1';
 
   if(!topic){
-    return { statusCode: 400, body: JSON.stringify({ error: 'topic is required' }) };
+    return res.status(400).json({ error: 'topic is required' });
   }
 
   const systemPrompt = `You are Forge, a college study-notes generator for a B.Tech Computer Engineering (Semester 3) student.
@@ -68,7 +63,7 @@ respond with:
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[generate-note] tokens:', data.usage);
@@ -78,16 +73,16 @@ respond with:
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     if(!parsed.title || !Array.isArray(parsed.sections) || !parsed.sections.length){
-      return { statusCode: 200, body: JSON.stringify({ title: null, sections: [], usage: data.usage || null }) };
+      return res.status(200).json({ title: null, sections: [], usage: data.usage || null });
     }
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
