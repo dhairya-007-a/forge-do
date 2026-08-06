@@ -1,26 +1,25 @@
 // Run: node netlify/functions/_account-store.selfcheck.js
-// Mocks @netlify/blobs's getStore() with an in-memory Map so this verifies
+// Mocks @upstash/redis's Redis.fromEnv() with an in-memory Map so this verifies
 // _account-store.js's logic (key naming, list filtering/sorting, profile parsing)
-// without needing a real Netlify site/token.
+// without needing a real Upstash database.
 const assert = require('assert');
-const path = require('path');
 
-const blobsPath = require.resolve('@netlify/blobs');
+const redisPath = require.resolve('@upstash/redis');
 const mem = new Map();
-function makeFakeStore(){
+function makeFakeRedis(){
   return {
-    async get(key, opts){ return mem.has(key) ? mem.get(key) : null; },
-    async setJSON(key, value){ mem.set(key, value); },
-    async delete(key){ mem.delete(key); },
-    async list({ prefix }){
-      const keys = [...mem.keys()].filter(k => k.startsWith(prefix));
-      return { blobs: keys.map(key => ({ key })) };
+    async get(key){ return mem.has(key) ? mem.get(key) : null; },
+    async set(key, value){ mem.set(key, value); },
+    async del(key){ mem.delete(key); },
+    async keys(pattern){
+      const prefix = pattern.replace(/\*$/, '');
+      return [...mem.keys()].filter(k => k.startsWith(prefix));
     }
   };
 }
-require.cache[blobsPath] = {
-  id: blobsPath, filename: blobsPath, loaded: true,
-  exports: { getStore: () => makeFakeStore() }
+require.cache[redisPath] = {
+  id: redisPath, filename: redisPath, loaded: true,
+  exports: { Redis: { fromEnv: () => makeFakeRedis() } }
 };
 
 const { getAccount, setAccount, deleteAccount, listAccounts, keyFor } = require('./_account-store');
