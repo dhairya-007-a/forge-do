@@ -7238,6 +7238,10 @@ document.getElementById('vivaSubjectSelect').innerHTML = STRATEGY_SUBJECTS.map(s
 
 let vivaHistory = [];
 let vivaActive = false;
+// Chapter of the question currently awaiting an answer -- when the NEXT reply grades that
+// answer (data.verdict), we log it against this chapter, then move it forward to data.chapter
+// for the question just asked. Reset to null at the start of every new viva session.
+let vivaLastChapter = null;
 
 function vivaSetTalking(on){
   document.getElementById('vivaAvatarWrap').classList.toggle('talking', on);
@@ -7282,7 +7286,7 @@ async function vivaRequestTurn(){
     const resp = await fetch('/.netlify/functions/viva-turn', {
       method:'POST',
       headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ subject, history: vivaHistory })
+      body: JSON.stringify({ subject, history: vivaHistory, chapters: (COURSE_CHAPTERS[subject] || {}).chapters || [] })
     });
     if(!resp.ok) throw new Error('bad response');
     const data = await resp.json();
@@ -7292,7 +7296,11 @@ async function vivaRequestTurn(){
     if(data.verdict && vivaHistory.length){
       const lastBubble = document.querySelector('#vivaTranscript .viva-turn.student:last-child .bubble');
       if(lastBubble) lastBubble.classList.add('verdict-' + data.verdict);
+      // data.verdict grades the answer to the PREVIOUS question, so it's logged against
+      // vivaLastChapter (that question's chapter), not data.chapter (the NEW question below).
+      if(vivaLastChapter) logTopicActivity(subject, vivaLastChapter, 'viva', data.verdict !== 'incorrect');
     }
+    if(data.chapter) vivaLastChapter = data.chapter;
 
     vivaAppendTurn('ai', data.reply);
     vivaHistory.push({ role:'assistant', content: data.reply });
@@ -7361,6 +7369,7 @@ async function vivaSimulateTurn(subject){
 
 document.getElementById('vivaStartBtn').addEventListener('click', async ()=>{
   vivaHistory = [];
+  vivaLastChapter = null;
   vivaSimAsked = new Set();
   vivaActive = true;
   document.getElementById('vivaSetup').style.display = 'none';
