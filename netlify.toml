@@ -17,14 +17,14 @@
 [[headers]]
   for = "/admin-dashboard.html"
   [headers.values]
-    Basic-Auth = "forgeadmin:gNCIzVjLgkhBZ9uK"
+    Basic-Auth = "forgeadmin:gpKbr6fTPiIbPzif"
 
 [[headers]]
   for = "/.netlify/functions/list-accounts"
   [headers.values]
-    Basic-Auth = "forgeadmin:gNCIzVjLgkhBZ9uK"
+    Basic-Auth = "forgeadmin:gpKbr6fTPiIbPzif"
 
 [[headers]]
   for = "/.netlify/functions/delete-account"
   [headers.values]
-    Basic-Auth = "forgeadmin:gNCIzVjLgkhBZ9uK"
+    Basic-Auth = "forgeadmin:gpKbr6fTPiIbPzif"
