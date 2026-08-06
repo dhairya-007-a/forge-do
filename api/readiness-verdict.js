@@ -1,5 +1,5 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/readiness-verdict with
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/readiness-verdict with
 // { subject, dataReadiness: {overall, topicCoverage, weakTopic, mockScores, recency},
 //   diagnostic: {correct, total, missedChapters: [chapterName,...]} }
 // and never sees the key. Combines the student's real historical activity (readiness engine)
@@ -9,28 +9,23 @@
 const { callGroq } = require('./_groq-client');
 const { checkRateLimit } = require('./_rate-limit');
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let subject, dataReadiness, diagnostic;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    subject = (body.subject || '').trim();
-    dataReadiness = body.dataReadiness || {};
-    diagnostic = body.diagnostic || {};
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const subject = (body.subject || '').trim();
+  const dataReadiness = body.dataReadiness || {};
+  const diagnostic = body.diagnostic || {};
 
   if(!subject || typeof diagnostic.correct !== 'number' || typeof diagnostic.total !== 'number'){
-    return { statusCode: 400, body: JSON.stringify({ error: 'subject and diagnostic {correct, total} are required' }) };
+    return res.status(400).json({ error: 'subject and diagnostic {correct, total} are required' });
   }
 
   const missedText = (diagnostic.missedChapters || []).length ? diagnostic.missedChapters.join(', ') : 'none';
@@ -72,7 +67,7 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[readiness-verdict] tokens:', data.usage);
@@ -82,16 +77,16 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     if(!['ready', 'borderline', 'not_ready'].includes(parsed.verdict) || !parsed.summary){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model returned an incomplete verdict' }) };
+      return res.status(502).json({ error: 'Model returned an incomplete verdict' });
     }
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
