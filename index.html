@@ -4731,11 +4731,17 @@ function computeReadinessFromLog(subject, log, referenceDate){
   const statuses = chapters.map(name => chapterStatus(subject, name, log));
   const topicCoverage = chapters.length ? Math.round(statuses.filter(s => s !== 'upcoming').length / chapters.length * 100) : 0;
 
+  const quizEntries = log.filter(e => e.correct !== null);
+
   const weakChapters = chapters.filter((name, i) => log.some(e => e.chapter === name && e.correct === false));
   const resolvedWeak = weakChapters.filter(name => log.some(e => e.chapter === name && e.correct === true));
-  const weakTopic = weakChapters.length ? Math.round(resolvedWeak.length / weakChapters.length * 100) : 100;
+  // Zero weak chapters means one of two very different things: "mastered everything you've
+  // tried" (100%, genuinely earned) or "never quizzed on anything yet" (not earned -- 0, not
+  // 100, so a brand-new subject doesn't misleadingly look like a solved one).
+  const weakTopic = weakChapters.length
+    ? Math.round(resolvedWeak.length / weakChapters.length * 100)
+    : (quizEntries.length ? 100 : 0);
 
-  const quizEntries = log.filter(e => e.correct !== null);
   const mockScores = quizEntries.length ? Math.round(quizEntries.filter(e => e.correct).length / quizEntries.length * 100) : 0;
 
   let recency = 0;
