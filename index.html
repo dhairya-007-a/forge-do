@@ -3623,6 +3623,7 @@ document.getElementById('onboardingForm').addEventListener('submit', async (e)=>
   if(!restored){
     forgeStore.setItem('forge-onboarded', 'true');
     forgeStore.setItem('forge-profile', JSON.stringify(profile));
+    forgeStore.setItem('forge-journey-start', new Date().toISOString().slice(0, 10));
   }
 
   applyProfile(JSON.parse(forgeStore.getItem('forge-profile') || 'null') || profile);
@@ -4972,12 +4973,21 @@ async function finishReadinessCheck(){
 }
 document.getElementById('rcStartBtn').addEventListener('click', startReadinessCheck);
 
-/* --- Journey strip: since Day 1 --- */
-const JOURNEY_START_DATE = new Date('2026-02-02');
+/* --- Journey strip: since this student's real Day 1, not a shared hardcoded date ---
+   forge-journey-start is set once, at real onboarding submit (see the onboardingForm
+   handler) or restored from an existing account's synced data. If it's still missing
+   here (e.g. an account that existed before this fix shipped), self-heal by recording
+   today as the best available Day 1 rather than showing a wrong date forever. */
 function renderJourneyStrip(){
+  let startStr = forgeStore.getItem('forge-journey-start');
+  if(!startStr){
+    startStr = new Date().toISOString().slice(0, 10);
+    forgeStore.setItem('forge-journey-start', startStr);
+  }
+  const startDate = new Date(startStr);
   const today = new Date();
-  const days = Math.max(1, Math.floor((today - JOURNEY_START_DATE) / 86400000));
-  document.getElementById('journeyStartDate').textContent = JOURNEY_START_DATE.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const days = Math.max(1, Math.floor((today - startDate) / 86400000));
+  document.getElementById('journeyStartDate').textContent = startDate.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   document.getElementById('journeyDaysNum').textContent = days;
 }
 renderJourneyStrip();
