@@ -16,28 +16,23 @@ const MODEL_BY_TIER = {
   tier1: 'llama-3.3-70b-versatile'
 };
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let subject, history, chapters;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    subject = (body.subject || '').trim();
-    history = Array.isArray(body.history) ? body.history : [];
-    chapters = Array.isArray(body.chapters) ? body.chapters.filter(c => typeof c === 'string' && c.trim()) : [];
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const subject = (body.subject || '').trim();
+  const history = Array.isArray(body.history) ? body.history : [];
+  const chapters = Array.isArray(body.chapters) ? body.chapters.filter(c => typeof c === 'string' && c.trim()) : [];
 
   if(!subject){
-    return { statusCode: 400, body: JSON.stringify({ error: 'subject is required' }) };
+    return res.status(400).json({ error: 'subject is required' });
   }
 
   // Defensive cap — last 5 exchanges (10 messages) so a long viva session doesn't blow up cost
@@ -80,7 +75,7 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[viva-turn] tokens:', data.usage);
@@ -90,16 +85,16 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     if(!parsed.reply){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model returned an empty reply' }) };
+      return res.status(502).json({ error: 'Model returned an empty reply' });
     }
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
