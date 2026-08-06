@@ -1,5 +1,5 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/grade-answer with { subject, question, answer }
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/grade-answer with { subject, question, answer }
 // and never sees the key. Used by the Short Answer / Long Answer quiz tabs to grade a
 // student's written answer against the question, the way the MCQ tab already grades
 // multiple-choice answers instantly.
@@ -12,28 +12,23 @@ const MODEL_BY_TIER = {
   tier2: 'llama-3.3-70b-versatile'
 };
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let subject, question, answer;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    subject = (body.subject || '').trim();
-    question = (body.question || '').trim();
-    answer = (body.answer || '').trim();
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const subject = (body.subject || '').trim();
+  const question = (body.question || '').trim();
+  const answer = (body.answer || '').trim();
 
   if(!question || !answer){
-    return { statusCode: 400, body: JSON.stringify({ error: 'question and answer are required' }) };
+    return res.status(400).json({ error: 'question and answer are required' });
   }
 
   const systemPrompt = `You are Forge, grading a B.Tech Computer Engineering (Semester 3) student's written answer.
@@ -63,7 +58,7 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[grade-answer] tokens:', data.usage);
@@ -73,16 +68,16 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     if(!parsed.verdict || !parsed.feedback){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model returned an incomplete grading result' }) };
+      return res.status(502).json({ error: 'Model returned an incomplete grading result' });
     }
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
