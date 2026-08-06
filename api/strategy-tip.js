@@ -1,5 +1,5 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/strategy-tip with { mode: "weekly" | "backlog" | "studyplan", ... }
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/strategy-tip with { mode: "weekly" | "backlog" | "studyplan", ... }
 // and never sees the key. Same pipeline shape as generate-note.js / ask-doubt.js / assignment-tip.js.
 // studyplan mode: the chapter PRIORITY ORDER and day allocation are computed client-side (real data,
 // deterministic, free) — this function only turns that already-decided schedule into an encouraging
@@ -8,22 +8,17 @@
 const { callGroq } = require('./_groq-client');
 const { checkRateLimit } = require('./_rate-limit');
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let body;
-  try{
-    body = JSON.parse(event.body || '{}');
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
 
   const today = new Date().toISOString().slice(0,10);
   let systemPrompt;
@@ -31,7 +26,7 @@ exports.handler = async function(event){
   if(body.mode === 'studyplan'){
     const { days, daysRemaining, subject } = body;
     if(!Array.isArray(days) || !days.length){
-      return { statusCode: 400, body: JSON.stringify({ error: 'days is required and must be non-empty for studyplan mode' }) };
+      return res.status(400).json({ error: 'days is required and must be non-empty for studyplan mode' });
     }
     const scheduleText = days.map(d => {
       const items = d.items.map(it => `${it.chapter}${it.subject ? ' (' + it.subject + ')' : ''} — ${it.status === 'weak' ? 'previously got this wrong, needs fixing' : it.status === 'learning' ? 'asked about this but not tested on it yet' : 'not covered yet'}`).join('; ');
@@ -57,7 +52,7 @@ notes)>`;
   } else if(body.mode === 'backlog'){
     const { backlogSubject, attempt, examDate } = body;
     if(!backlogSubject || !examDate){
-      return { statusCode: 400, body: JSON.stringify({ error: 'backlogSubject and examDate are required for backlog mode' }) };
+      return res.status(400).json({ error: 'backlogSubject and examDate are required for backlog mode' });
     }
     systemPrompt = `You are Forge, a study-planning assistant for a B.Tech Computer Engineering student.
 Today's date is ${today}. The student has a backlog (reappear/back) in "${backlogSubject}", this is attempt
@@ -72,7 +67,7 @@ Be direct and encouraging but honest about the time pressure, not generic advice
   } else {
     const { academic, assignments } = body;
     if(!academic){
-      return { statusCode: 400, body: JSON.stringify({ error: 'academic is required for weekly mode' }) };
+      return res.status(400).json({ error: 'academic is required for weekly mode' });
     }
     const cgpaText = (academic.cgpaHistory || []).map(c => `Sem ${c.semester}: SGPA ${c.sgpa}`).join(', ') || 'none recorded';
     const attendanceText = (academic.attendance || []).map(a => `${a.subject}: ${a.percent}%`).join(', ') || 'none recorded';
@@ -108,7 +103,7 @@ tip instead.`;
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[strategy-tip] tokens:', data.usage);
@@ -118,17 +113,17 @@ tip instead.`;
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     const resultKey = body.mode === 'studyplan' ? 'plan' : 'tip';
     if(!parsed[resultKey]){
-      return { statusCode: 200, body: JSON.stringify({ [resultKey]: null, usage: data.usage || null }) };
+      return res.status(200).json({ [resultKey]: null, usage: data.usage || null });
     }
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
