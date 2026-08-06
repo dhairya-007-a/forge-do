@@ -1,5 +1,5 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/generate-quiz with
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/generate-quiz with
 // { subject, chapters: [chapterName,...], type: "mcq"|"short"|"long", count }
 // and never sees the key. chapters comes from the client's real priority engine
 // (computeStudyPriority) — this function does not decide what to quiz on, only
@@ -9,29 +9,24 @@ const MODEL = 'llama-3.3-70b-versatile';
 const { callGroq } = require('./_groq-client');
 const { checkRateLimit } = require('./_rate-limit');
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let subject, chapters, type, count;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    subject = (body.subject || '').trim();
-    chapters = Array.isArray(body.chapters) ? body.chapters.filter(c => typeof c === 'string' && c.trim()) : [];
-    type = ['mcq', 'short', 'long'].includes(body.type) ? body.type : null;
-    count = Math.max(1, Math.min(30, parseInt(body.count, 10) || 5));
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const subject = (body.subject || '').trim();
+  const chapters = Array.isArray(body.chapters) ? body.chapters.filter(c => typeof c === 'string' && c.trim()) : [];
+  const type = ['mcq', 'short', 'long'].includes(body.type) ? body.type : null;
+  const count = Math.max(1, Math.min(30, parseInt(body.count, 10) || 5));
 
   if(!subject || !chapters.length || !type){
-    return { statusCode: 400, body: JSON.stringify({ error: 'subject, chapters, and type are required' }) };
+    return res.status(400).json({ error: 'subject, chapters, and type are required' });
   }
 
   const chapterList = chapters.join(', ');
@@ -69,7 +64,7 @@ ${shapeByType[type]}`;
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[generate-quiz] tokens:', data.usage);
@@ -79,7 +74,7 @@ ${shapeByType[type]}`;
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     // Match chapter names loosely rather than requiring an exact string match — the model
@@ -105,8 +100,8 @@ ${shapeByType[type]}`;
       return Object.assign({}, q, { chapter: realChapter }); // snap back to the exact stored name
     }).filter(Boolean);
 
-    return { statusCode: 200, body: JSON.stringify({ questions, usage: data.usage || null }) };
+    return res.status(200).json({ questions, usage: data.usage || null });
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
