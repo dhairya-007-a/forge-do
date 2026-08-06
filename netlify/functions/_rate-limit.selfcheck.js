@@ -51,6 +51,18 @@ async function run(){
   const afterExpiry = await checkRateLimit(ipA);
   assert.strictEqual(afterExpiry.allowed, true, 'window should have reset');
 
+  // 6. If the store itself is unreachable (e.g. no Netlify site linked -- the case for
+  // every local run), checkRateLimit fails OPEN rather than throwing and breaking the
+  // caller. This is the regression that broke every AI function locally the first time.
+  require.cache[blobsPath].exports.getStore = () => ({
+    async get(){ throw new Error('MissingBlobsEnvironmentError: simulated'); },
+    async setJSON(){ throw new Error('should not be reachable'); }
+  });
+  delete require.cache[require.resolve('./_rate-limit')];
+  const { checkRateLimit: checkRateLimitBroken } = require('./_rate-limit');
+  const failOpen = await checkRateLimitBroken({ headers: { 'x-nf-client-connection-ip': '4.4.4.4' } });
+  assert.strictEqual(failOpen.allowed, true, 'must fail open when the store is unreachable');
+
   console.log('All _rate-limit self-checks passed.');
 }
 

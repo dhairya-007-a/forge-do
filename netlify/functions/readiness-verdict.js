@@ -7,10 +7,16 @@
 // function does not decide the numbers, only explains what they mean together.
 
 const { callGroq } = require('./_groq-client');
+const { checkRateLimit } = require('./_rate-limit');
 
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  const rl = await checkRateLimit(event);
+  if(!rl.allowed){
+    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
   }
 
   let subject, dataReadiness, diagnostic;

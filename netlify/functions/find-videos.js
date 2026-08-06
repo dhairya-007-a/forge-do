@@ -6,10 +6,16 @@
 // "best" can mean highest-viewed rather than just YouTube's default relevance order.
 
 const { callGroq } = require('./_groq-client');
+const { checkRateLimit } = require('./_rate-limit');
 
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  const rl = await checkRateLimit(event);
+  if(!rl.allowed){
+    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
   }
 
   const ytKey = process.env.YOUTUBE_API_KEY;

@@ -6,6 +6,7 @@
 // other Forge functions (ask-doubt.js, grade-answer.js).
 
 const { callGroq } = require('./_groq-client');
+const { checkRateLimit } = require('./_rate-limit');
 
 const MODEL_BY_TIER = {
   tier1: 'llama-3.3-70b-versatile'
@@ -14,6 +15,11 @@ const MODEL_BY_TIER = {
 exports.handler = async function(event){
   if(event.httpMethod !== 'POST'){
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  }
+
+  const rl = await checkRateLimit(event);
+  if(!rl.allowed){
+    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
   }
 
   let subject, history;
