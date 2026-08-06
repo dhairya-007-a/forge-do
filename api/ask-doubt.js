@@ -9,8 +9,8 @@
 // NOTE: _groq-client.js and _rate-limit.js still live in netlify/functions/ at this
 // point in the migration (they move to api/ in Tasks 18 and 22 respectively) — these
 // paths must be updated to './_groq-client' and './_rate-limit' once those tasks land.
-const { callGroq } = require('../netlify/functions/_groq-client');
-const { checkRateLimit } = require('../netlify/functions/_rate-limit');
+const { callGroq } = require('./_groq-client');
+const { checkRateLimit } = require('./_rate-limit');
 
 const MODEL_BY_TIER = {
   tier1: 'llama-3.3-70b-versatile',
