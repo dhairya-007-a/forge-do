@@ -1,5 +1,5 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/grade-brainstorm with { topic, prompt, ideas }
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/grade-brainstorm with { topic, prompt, ideas }
 // and never sees the key. Replaces the old client-side substring-match grading (which only
 // scored an idea if it literally contained one of a small fixed seed-word list) with real
 // AI judgment — a correct idea phrased differently now actually counts.
@@ -7,28 +7,23 @@
 const { callGroq } = require('./_groq-client');
 const { checkRateLimit } = require('./_rate-limit');
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let topic, prompt, ideas;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    topic = (body.topic || '').trim();
-    prompt = (body.prompt || '').trim();
-    ideas = Array.isArray(body.ideas) ? body.ideas.filter(i => typeof i === 'string' && i.trim()).slice(0, 50) : [];
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const topic = (body.topic || '').trim();
+  const prompt = (body.prompt || '').trim();
+  const ideas = Array.isArray(body.ideas) ? body.ideas.filter(i => typeof i === 'string' && i.trim()).slice(0, 50) : [];
 
   if(!topic || !ideas.length){
-    return { statusCode: 400, body: JSON.stringify({ error: 'topic and ideas are required' }) };
+    return res.status(400).json({ error: 'topic and ideas are required' });
   }
 
   const ideaList = ideas.map((idea, i) => `${i + 1}. ${idea}`).join('\n');
@@ -62,7 +57,7 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[grade-brainstorm] tokens:', data.usage);
@@ -72,17 +67,17 @@ Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
 
     if(typeof parsed.validCount !== 'number'){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model returned an incomplete grading result' }) };
+      return res.status(502).json({ error: 'Model returned an incomplete grading result' });
     }
     parsed.validCount = Math.max(0, Math.min(ideas.length, Math.round(parsed.validCount)));
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
