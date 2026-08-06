@@ -1,13 +1,16 @@
-// Netlify serverless function — keeps the Groq API key server-side.
-// The frontend calls POST /.netlify/functions/ask-doubt with { question, tier, history, attachment }
+// Vercel serverless function — keeps the Groq API key server-side.
+// The frontend calls POST /api/ask-doubt with { question, tier, history, attachment }
 // and never sees the key. Same pipeline shape as generate-note.js: capture input ->
 // build prompt -> call Groq -> parse -> return structured JSON for the UI to render.
 // attachment (optional): { name, type, dataUrl } — an image the model reads directly.
 // TEMP: using Groq (llama-3.3-70b) for testing. No vision support on this model —
 // attachments will be ignored server-side until swapped for a vision-capable Groq model.
 
-const { callGroq } = require('./_groq-client');
-const { checkRateLimit } = require('./_rate-limit');
+// NOTE: _groq-client.js and _rate-limit.js still live in netlify/functions/ at this
+// point in the migration (they move to api/ in Tasks 18 and 22 respectively) — these
+// paths must be updated to './_groq-client' and './_rate-limit' once those tasks land.
+const { callGroq } = require('../netlify/functions/_groq-client');
+const { checkRateLimit } = require('../netlify/functions/_rate-limit');
 
 const MODEL_BY_TIER = {
   tier1: 'llama-3.3-70b-versatile',
@@ -45,29 +48,24 @@ function chapterListText(){
   return Object.entries(COURSE_CHAPTERS).map(([subject, chapters]) => `${subject}: ${chapters.join(', ')}`).join('\n');
 }
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
-  let question, tier, history, attachment;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    question = (body.question || '').trim();
-    tier = MODEL_BY_TIER[body.tier] ? body.tier : 'tier1';
-    history = Array.isArray(body.history) ? body.history : [];
-    attachment = (body.attachment && typeof body.attachment.dataUrl === 'string') ? body.attachment : null;
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const question = (body.question || '').trim();
+  const tier = MODEL_BY_TIER[body.tier] ? body.tier : 'tier1';
+  const history = Array.isArray(body.history) ? body.history : [];
+  const attachment = (body.attachment && typeof body.attachment.dataUrl === 'string') ? body.attachment : null;
 
   if(!question){
-    return { statusCode: 400, body: JSON.stringify({ error: 'question is required' }) };
+    return res.status(400).json({ error: 'question is required' });
   }
 
   // Defensive cap regardless of what the frontend sends — last 3 exchanges (6 messages)
@@ -162,7 +160,7 @@ respond with:
 
     if(!ok){
       const message = (data && data.error && data.error.message) || 'Groq API error';
-      return { statusCode: status, body: JSON.stringify({ error: message }) };
+      return res.status(status).json({ error: message });
     }
 
     if(data.usage) console.log('[ask-doubt] tokens:', data.usage);
@@ -172,7 +170,7 @@ respond with:
     try{
       parsed = JSON.parse(raw);
     } catch(e){
-      return { statusCode: 502, body: JSON.stringify({ error: 'Model did not return valid JSON', raw }) };
+      return res.status(502).json({ error: 'Model did not return valid JSON', raw });
     }
     if(parsed.subject) parsed.subject = normalizeSubject(parsed.subject);
     // Don't trust the chapter name blindly — only keep it if it's an exact match for the
@@ -198,16 +196,16 @@ respond with:
     }
 
     if(!parsed.explanation){
-      return { statusCode: 200, body: JSON.stringify({
+      return res.status(200).json({
         subject: null, chapter: null, type: null, explanation: null, simpleExplanation: null, keyConcept: null, example: null,
         formula: null, steps: null, workedExample: null, codeSnippet: null, codeLanguage: null, commonMistake: null,
         mainTopics: null, practiceQuestions: null
-      }) };
+      });
     }
 
     parsed.usage = data.usage || null;
-    return { statusCode: 200, body: JSON.stringify(parsed) };
+    return res.status(200).json(parsed);
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ error: 'Failed to reach Groq API: ' + e.message }) };
+    return res.status(502).json({ error: 'Failed to reach Groq API: ' + e.message });
   }
 };
