@@ -776,17 +776,18 @@
   .course-chapters{ max-height:0; overflow:hidden; transition:max-height .35s cubic-bezier(.22,.68,0,1); }
   .course.expanded .course-chapters{ max-height:400px; border-top:1px solid rgba(36,31,24,0.08); }
   .chapter-row{ display:flex; align-items:center; gap:10px; padding:9px 16px 9px 20px; font-size:12.5px; }
-  .chapter-row.current{ background:var(--cream-2); font-weight:600; }
+  .chapter-row.learning{ background:var(--cream-2); font-weight:600; }
   .chapter-num{ font-family:'Space Mono'; font-size:10px; color:var(--ink-soft); width:18px; flex-shrink:0; }
   .chapter-check{
     width:16px; height:16px; border-radius:50%; background:rgba(36,31,24,0.08); flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
   }
   .chapter-check svg{ width:10px; height:10px; color:var(--white); }
-  .chapter-row.done .chapter-check{ background:var(--green); }
-  .chapter-row.current .chapter-check{ background:var(--ink); }
+  .chapter-row.strong .chapter-check{ background:var(--green); }
+  .chapter-row.weak .chapter-check{ background:var(--pink); }
+  .chapter-row.learning .chapter-check{ background:var(--blue); }
   .chapter-name{ flex:1; }
-  .chapter-row:not(.done):not(.current) .chapter-name{ color:var(--ink-soft); }
+  .chapter-row.upcoming .chapter-name{ color:var(--ink-soft); }
 
   /* schedule */
   .schedule-list{ display:flex; flex-direction:column; gap:0; position:relative; }
@@ -3808,6 +3809,7 @@ document.querySelectorAll('#sideNav a').forEach(a=>{
     // they reflect activity logged while the student was on a different tab.
     renderReadiness(document.getElementById('examSelect').value);
     if(typeof renderWaveChart === 'function') renderWaveChart();
+    if(typeof initCourseChapters === 'function') initCourseChapters();
   });
 });
 
@@ -4090,16 +4092,23 @@ function matchSubjectAndChapter(text){
   return null;
 }
 
+// Chapter status (strong/weak/learning/upcoming) comes from real forge-topic-activity via
+// chapterStatus() -- the same function the Readiness tab's Topic Pattern chips and the Study
+// Plan priority engine already use. Previously this rendered from a static, never-updated
+// COURSE_CHAPTERS[subject].current pointer instead, so the list never reflected any real
+// quiz/doubt activity no matter what the student actually did.
 function initCourseChapters(){
   const subjectOf = container => container.dataset.chapters;
   document.querySelectorAll('.course-chapters').forEach(container=>{
-    const data = COURSE_CHAPTERS[subjectOf(container)];
+    const subject = subjectOf(container);
+    const data = COURSE_CHAPTERS[subject];
     if(!data) return;
+    const log = getTopicActivity().filter(e => e.subject === subject);
     container.innerHTML = data.chapters.map((name, idx)=>{
       const num = idx + 1;
-      const status = num < data.current ? 'done' : num === data.current ? 'current' : '';
-      const check = status === 'done' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' : '';
-      return `<div class="chapter-row ${status}" data-subject="${escapeHtml(subjectOf(container))}" data-chapter="${escapeHtml(name)}"><span class="chapter-num">${num}</span><span class="chapter-check">${check}</span><span class="chapter-name">${name}</span></div>`;
+      const status = chapterStatus(subject, name, log);
+      const check = status === 'strong' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' : '';
+      return `<div class="chapter-row ${status}" data-subject="${escapeHtml(subject)}" data-chapter="${escapeHtml(name)}"><span class="chapter-num">${num}</span><span class="chapter-check">${check}</span><span class="chapter-name">${name}</span></div>`;
     }).join('');
     container.querySelectorAll('.chapter-row').forEach(row=>{
       row.addEventListener('click', (e)=>{
