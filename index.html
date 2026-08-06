@@ -5244,11 +5244,16 @@ renderWaveChart();
 const HEATMAP_DAYS = 84;
 function buildStudyData(){
   const log = lsGet('forge-study-log', {});
+  // Never show days before the student's real signup -- a brand-new account previously
+  // padded the grid with up to 84 days of meaningless pre-signup "0 minutes" cells,
+  // implying a 12-week history that never happened.
+  const journeyStart = forgeStore.getItem('forge-journey-start');
   const data = [];
   for(let i = HEATMAP_DAYS - 1; i >= 0; i--){
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0,10);
+    if(journeyStart && key < journeyStart) continue;
     data.push({ date:d, minutes: log[key] || 0 });
   }
   return data;
