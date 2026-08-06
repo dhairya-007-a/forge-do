@@ -8,31 +8,26 @@
 const { callGroq } = require('./_groq-client');
 const { checkRateLimit } = require('./_rate-limit');
 
-exports.handler = async function(event){
-  if(event.httpMethod !== 'POST'){
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+module.exports = async function handler(req, res){
+  if(req.method !== 'POST'){
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = await checkRateLimit(event);
+  const rl = await checkRateLimit(req);
   if(!rl.allowed){
-    return { statusCode: 429, body: JSON.stringify({ error: 'Too many requests — try again later' }) };
+    return res.status(429).json({ error: 'Too many requests — try again later' });
   }
 
   const ytKey = process.env.YOUTUBE_API_KEY;
   if(!ytKey){
-    return { statusCode: 500, body: JSON.stringify({ videos: [], bestVideoId: null, error: 'YOUTUBE_API_KEY not configured on the server' }) };
+    return res.status(500).json({ videos: [], bestVideoId: null, error: 'YOUTUBE_API_KEY not configured on the server' });
   }
 
-  let subject, chapter;
-  try{
-    const body = JSON.parse(event.body || '{}');
-    subject = (body.subject || '').trim();
-    chapter = (body.chapter || '').trim();
-  } catch(e){
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  const body = req.body || {};
+  const subject = (body.subject || '').trim();
+  const chapter = (body.chapter || '').trim();
   if(!subject || !chapter){
-    return { statusCode: 400, body: JSON.stringify({ error: 'subject and chapter are required' }) };
+    return res.status(400).json({ error: 'subject and chapter are required' });
   }
 
   // Default query is a safe fallback if the Groq call below fails for any reason —
@@ -71,11 +66,11 @@ exports.handler = async function(event){
     const searchData = await searchResp.json();
     if(!searchResp.ok){
       const message = (searchData && searchData.error && searchData.error.message) || 'YouTube API error';
-      return { statusCode: searchResp.status, body: JSON.stringify({ videos: [], bestVideoId: null, error: message }) };
+      return res.status(searchResp.status).json({ videos: [], bestVideoId: null, error: message });
     }
     let items = Array.isArray(searchData.items) ? searchData.items : [];
     if(!items.length){
-      return { statusCode: 200, body: JSON.stringify({ videos: [], bestVideoId: null, error: null, usage: groqUsage }) };
+      return res.status(200).json({ videos: [], bestVideoId: null, error: null, usage: groqUsage });
     }
 
     const ids = items.map(it => it.id.videoId).join(',');
@@ -93,7 +88,7 @@ exports.handler = async function(event){
     }).slice(0, 5);
 
     if(!items.length){
-      return { statusCode: 200, body: JSON.stringify({ videos: [], bestVideoId: null, error: null, usage: groqUsage }) };
+      return res.status(200).json({ videos: [], bestVideoId: null, error: null, usage: groqUsage });
     }
 
     const videos = items.map(it => ({
@@ -105,8 +100,8 @@ exports.handler = async function(event){
     }));
     const bestVideoId = videos.reduce((best, v) => v.viewCount > best.viewCount ? v : best, videos[0]).videoId;
 
-    return { statusCode: 200, body: JSON.stringify({ videos, bestVideoId, error: null, usage: groqUsage }) };
+    return res.status(200).json({ videos, bestVideoId, error: null, usage: groqUsage });
   } catch(e){
-    return { statusCode: 502, body: JSON.stringify({ videos: [], bestVideoId: null, error: 'Failed to reach YouTube API: ' + e.message }) };
+    return res.status(502).json({ videos: [], bestVideoId: null, error: 'Failed to reach YouTube API: ' + e.message });
   }
 };
