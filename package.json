@@ -1,6 +1,7 @@
 {
   "type": "commonjs",
   "dependencies": {
+    "@netlify/blobs": "^10.7.12",
     "@upstash/redis": "^1.38.2"
   }
 }
