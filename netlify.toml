@@ -11,20 +11,19 @@
 # Real, edge-enforced admin gate -- unlike the ADMIN_API_KEY header check in
 # list-accounts.js/delete-account.js (which is app-level and visible in page
 # source), this runs before Netlify even serves the page or invokes the
-# function, so a leaked ADMIN_API_KEY alone can't reach these paths. Only
-# verifiable after a real Netlify deploy -- local-server.js has no edge layer
-# to enforce this locally.
-[[headers]]
-  for = "/admin-dashboard.html"
-  [headers.values]
-    Basic-Auth = "forgeadmin:gpKbr6fTPiIbPzif"
+# function, so a leaked ADMIN_API_KEY alone can't reach these paths.
+# (Previously used netlify.toml's `Basic-Auth` header directive here -- that's
+# a Pro-plan-only feature that silently no-ops on this site's plan, confirmed
+# live by reaching admin-dashboard.html with zero credential prompt. Replaced
+# with an Edge Function, which runs on every plan.)
+[[edge_functions]]
+  path = "/admin-dashboard.html"
+  function = "admin-gate"
 
-[[headers]]
-  for = "/.netlify/functions/list-accounts"
-  [headers.values]
-    Basic-Auth = "forgeadmin:gpKbr6fTPiIbPzif"
+[[edge_functions]]
+  path = "/.netlify/functions/list-accounts"
+  function = "admin-gate"
 
-[[headers]]
-  for = "/.netlify/functions/delete-account"
-  [headers.values]
-    Basic-Auth = "forgeadmin:gpKbr6fTPiIbPzif"
+[[edge_functions]]
+  path = "/.netlify/functions/delete-account"
+  function = "admin-gate"
