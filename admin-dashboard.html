@@ -238,12 +238,31 @@
 </main>
 
 <div id="viewAllAccounts" style="display:none;">
+  <section class="stat-row" id="accountsStatRow">
+    <div class="stat-card"><div class="num" id="statTotalAccounts">—</div><div class="label">Registered Students</div></div>
+    <div class="stat-card"><div class="num" id="statSyncedToday">—</div><div class="label">Synced Today</div></div>
+    <div class="stat-card"><div class="num" id="statSyncedWeek">—</div><div class="label">Synced Last 7 Days</div></div>
+    <div class="stat-card"><div class="num" id="statCourseCount">—</div><div class="label">Distinct Courses</div></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>By Course / Semester</h2>
+        <p>Registered student breakdown</p>
+      </div>
+    </div>
+    <div id="courseBreakdown" class="empty-note">Loading…</div>
+  </section>
+
   <section class="panel">
     <div class="panel-head">
       <div>
         <h2>All Student Accounts</h2>
         <p id="accountsCount">Loading…</p>
       </div>
+      <input type="text" id="accountsSearch" placeholder="Search name or email…"
+        style="border:1px solid rgba(36,31,24,0.14); border-radius:12px; padding:8px 12px; font-family:'Inter'; font-size:13px; background:var(--cream-2); outline:none; min-width:220px;">
     </div>
     <table class="accounts-table">
       <thead>
@@ -392,13 +411,56 @@ function switchAdminTab(tab){
   if(tab === 'allAccounts') loadAccounts();
 }
 
-async function loadAccounts(){
+let allAccounts = [];
+
+function renderAccountsTable(accounts){
   const body = document.getElementById('accountsTableBody');
+  const countEl = document.getElementById('accountsCount');
+  countEl.textContent = accounts.length + (accounts.length === 1 ? ' account' : ' accounts');
+  body.innerHTML = accounts.map(a => `
+    <tr data-email="${escapeHtml(a.email)}">
+      <td>${escapeHtml(a.firstName)} ${escapeHtml(a.lastName)}</td>
+      <td>${escapeHtml(a.email)}</td>
+      <td>${escapeHtml(a.course || '—')} · Sem ${escapeHtml(a.semester || '—')} · ${escapeHtml(a.batch || '—')}</td>
+      <td>${a.lastSyncedAt ? new Date(a.lastSyncedAt).toLocaleString() : '—'}</td>
+      <td><button class="terminate-btn" data-email="${escapeHtml(a.email)}">Terminate</button></td>
+    </tr>`).join('');
+}
+
+function renderAccountsStats(accounts){
+  const now = Date.now();
+  const DAY = 86400000;
+  const today = new Date().toISOString().slice(0, 10);
+  const syncedToday = accounts.filter(a => a.lastSyncedAt && a.lastSyncedAt.slice(0, 10) === today).length;
+  const syncedWeek = accounts.filter(a => a.lastSyncedAt && (now - new Date(a.lastSyncedAt).getTime()) <= 7 * DAY).length;
+  const courses = new Map();
+  accounts.forEach(a => {
+    const key = (a.course || 'Unspecified') + ' · Sem ' + (a.semester || '—');
+    courses.set(key, (courses.get(key) || 0) + 1);
+  });
+
+  document.getElementById('statTotalAccounts').textContent = accounts.length;
+  document.getElementById('statSyncedToday').textContent = syncedToday;
+  document.getElementById('statSyncedWeek').textContent = syncedWeek;
+  document.getElementById('statCourseCount').textContent = courses.size;
+
+  const breakdownEl = document.getElementById('courseBreakdown');
+  if(courses.size === 0){
+    breakdownEl.textContent = 'No accounts registered yet.';
+  } else {
+    breakdownEl.innerHTML = [...courses.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, count]) => `<div style="display:flex; justify-content:space-between; padding:6px 0;"><span>${escapeHtml(label)}</span><span class="mono">${count}</span></div>`)
+      .join('');
+  }
+}
+
+async function loadAccounts(){
   const countEl = document.getElementById('accountsCount');
   const errorEl = document.getElementById('accountsError');
   countEl.textContent = 'Loading…';
   errorEl.style.display = 'none';
-  body.innerHTML = '';
+  document.getElementById('accountsTableBody').innerHTML = '';
   try{
     const resp = await fetch('/.netlify/functions/list-accounts', {
       method: 'POST',
@@ -406,21 +468,22 @@ async function loadAccounts(){
     });
     const result = await resp.json();
     if(!resp.ok) throw new Error(result.error || 'Failed to load accounts');
-    countEl.textContent = result.accounts.length + (result.accounts.length === 1 ? ' account' : ' accounts');
-    body.innerHTML = result.accounts.map(a => `
-      <tr data-email="${escapeHtml(a.email)}">
-        <td>${escapeHtml(a.firstName)} ${escapeHtml(a.lastName)}</td>
-        <td>${escapeHtml(a.email)}</td>
-        <td>${escapeHtml(a.course || '—')} · Sem ${escapeHtml(a.semester || '—')} · ${escapeHtml(a.batch || '—')}</td>
-        <td>${a.lastSyncedAt ? new Date(a.lastSyncedAt).toLocaleString() : '—'}</td>
-        <td><button class="terminate-btn" data-email="${escapeHtml(a.email)}">Terminate</button></td>
-      </tr>`).join('');
+    allAccounts = result.accounts;
+    renderAccountsStats(allAccounts);
+    renderAccountsTable(allAccounts);
   } catch(err){
     countEl.textContent = '';
     errorEl.textContent = "Couldn't load accounts — " + err.message;
     errorEl.style.display = 'block';
   }
 }
+
+document.getElementById('accountsSearch').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  const filtered = !q ? allAccounts : allAccounts.filter(a =>
+    (a.firstName + ' ' + a.lastName).toLowerCase().includes(q) || a.email.toLowerCase().includes(q));
+  renderAccountsTable(filtered);
+});
 
 document.getElementById('accountsTableBody').addEventListener('click', (e)=>{
   const btn = e.target.closest('.terminate-btn');
@@ -437,8 +500,9 @@ async function terminateAccount(email){
     });
     const result = await resp.json();
     if(!resp.ok) throw new Error(result.error || 'Failed to delete account');
-    const row = document.querySelector(`tr[data-email="${CSS.escape(email)}"]`);
-    if(row) row.remove();
+    allAccounts = allAccounts.filter(a => a.email !== email);
+    renderAccountsStats(allAccounts);
+    renderAccountsTable(allAccounts);
   } catch(err){
     alert("Couldn't delete account — " + err.message);
   }

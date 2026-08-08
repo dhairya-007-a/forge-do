@@ -1,52 +1,73 @@
-// Shared Netlify Blobs wrapper for the "accounts" store. Filename starts with `_` so
-// Netlify's function router ignores it (no exports.handler here). Centralizes the
-// account key naming (account:<lowercased email>) and the shape of what gets stored
-// so the 4 thin handler functions (sync/restore/list/delete-account.js) don't each
-// reimplement it.
-const { getStore } = require('@netlify/blobs');
+// Shared Supabase wrapper for student accounts. Filename starts with `_` so
+// Netlify's function router ignores it (no exports.handler here). Centralizes
+// table access so the 4 thin handler functions (sync/restore/list/delete-account.js)
+// don't each reimplement it. Uses the service_role key -- server-side only, never
+// sent to the browser -- so RLS on the `accounts` table can stay fully locked down.
+const { createClient } = require('@supabase/supabase-js');
 
-function store(){
-  return getStore('accounts');
+let client = null;
+function db(){
+  if(!client){
+    client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false }
+    });
+  }
+  return client;
 }
 
-function keyFor(email){
-  return 'account:' + String(email).trim().toLowerCase();
+function emailKey(email){
+  return String(email).trim().toLowerCase();
 }
 
 async function getAccount(email){
-  const record = await store().get(keyFor(email), { type: 'json' });
-  return record || null;
+  const { data, error } = await db()
+    .from('accounts')
+    .select('data, last_synced_at')
+    .eq('email', emailKey(email))
+    .maybeSingle();
+  if(error) throw new Error(error.message);
+  if(!data) return null;
+  return { data: data.data, lastSyncedAt: data.last_synced_at };
 }
 
-async function setAccount(email, data){
-  await store().setJSON(keyFor(email), { data, lastSyncedAt: new Date().toISOString() });
+async function setAccount(email, payload){
+  let profile = {};
+  try{ profile = payload && payload['forge-profile'] ? JSON.parse(payload['forge-profile']) : {}; }
+  catch(e){ /* malformed profile -- still store the raw data */ }
+
+  const { error } = await db().from('accounts').upsert({
+    email: emailKey(email),
+    first_name: profile.firstName || '',
+    last_name: profile.lastName || '',
+    course: profile.course || '',
+    semester: profile.semester || '',
+    batch: profile.batch || '',
+    data: payload,
+    last_synced_at: new Date().toISOString()
+  });
+  if(error) throw new Error(error.message);
 }
 
 async function deleteAccount(email){
-  await store().delete(keyFor(email));
+  const { error } = await db().from('accounts').delete().eq('email', emailKey(email));
+  if(error) throw new Error(error.message);
 }
 
 async function listAccounts(){
-  const { blobs } = await store().list({ prefix: 'account:' });
-  const accounts = [];
-  for(const b of blobs){
-    const record = await store().get(b.key, { type: 'json' });
-    if(!record) continue;
-    let profile = {};
-    try{ profile = record.data && record.data['forge-profile'] ? JSON.parse(record.data['forge-profile']) : {}; }
-    catch(e){ /* malformed profile — skip fields, still list the account */ }
-    accounts.push({
-      email: b.key.slice('account:'.length),
-      firstName: profile.firstName || '',
-      lastName: profile.lastName || '',
-      course: profile.course || '',
-      semester: profile.semester || '',
-      batch: profile.batch || '',
-      lastSyncedAt: record.lastSyncedAt || null
-    });
-  }
-  accounts.sort((a, b) => (b.lastSyncedAt || '').localeCompare(a.lastSyncedAt || ''));
-  return accounts;
+  const { data, error } = await db()
+    .from('accounts')
+    .select('email, first_name, last_name, course, semester, batch, last_synced_at')
+    .order('last_synced_at', { ascending: false });
+  if(error) throw new Error(error.message);
+  return data.map(a => ({
+    email: a.email,
+    firstName: a.first_name || '',
+    lastName: a.last_name || '',
+    course: a.course || '',
+    semester: a.semester || '',
+    batch: a.batch || '',
+    lastSyncedAt: a.last_synced_at
+  }));
 }
 
-module.exports = { getAccount, setAccount, deleteAccount, listAccounts, keyFor };
+module.exports = { getAccount, setAccount, deleteAccount, listAccounts };

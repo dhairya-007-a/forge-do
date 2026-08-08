@@ -1,4 +1,4 @@
-// Run: node netlify/functions/_rate-limit.selfcheck.js
+// Run: node netlify/selfchecks/_rate-limit.selfcheck.js
 // Mocks @netlify/blobs the same way _account-store.selfcheck.js does.
 const assert = require('assert');
 
@@ -17,7 +17,7 @@ require.cache[blobsPath] = {
   exports: { getStore: () => makeFakeStore() }
 };
 
-const { checkRateLimit, clientIp, LIMIT, WINDOW_MS } = require('./_rate-limit');
+const { checkRateLimit, clientIp, LIMIT, WINDOW_MS } = require('../functions/_rate-limit');
 
 async function run(){
   const ipA = { headers: { 'x-nf-client-connection-ip': '1.1.1.1' } };
@@ -58,8 +58,8 @@ async function run(){
     async get(){ throw new Error('MissingBlobsEnvironmentError: simulated'); },
     async setJSON(){ throw new Error('should not be reachable'); }
   });
-  delete require.cache[require.resolve('./_rate-limit')];
-  const { checkRateLimit: checkRateLimitBroken } = require('./_rate-limit');
+  delete require.cache[require.resolve('../functions/_rate-limit')];
+  const { checkRateLimit: checkRateLimitBroken } = require('../functions/_rate-limit');
   const failOpen = await checkRateLimitBroken({ headers: { 'x-nf-client-connection-ip': '4.4.4.4' } });
   assert.strictEqual(failOpen.allowed, true, 'must fail open when the store is unreachable');
 
