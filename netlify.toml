@@ -2,6 +2,16 @@
   publish = "."
   functions = "netlify/functions"
 
+# publish = "." serves the whole repo root, including internal notes files that
+# were never meant to be public. Block them explicitly rather than relying on
+# "nothing links to it" (that's how the old ui/netlify-deploy folders sat
+# web-accessible for days before anyone noticed).
+[[redirects]]
+  from = "/main.md"
+  to = "/"
+  status = 404
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
