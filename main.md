@@ -13,6 +13,33 @@ Student dashboard app ("Forge") for a B.Tech Computer Engineering student — AI
 - **AI:** Groq API, 3-key failover (`_groq-client.js` tries `GROQ_API_KEY` → `_2` → `_3` on rate-limit).
 - **Accounts DB:** Supabase Postgres (not Netlify Blobs — migrated off Blobs 2026-08-08, see below).
 - **Rate limiting:** `_rate-limit.js`, 30 req/hr/IP, backed by Netlify Blobs (still used for this only).
+
+## Folder structure (cleaned up 2026-08-09)
+
+```
+/
+├── index.html              student dashboard (the real one, no dupes)
+├── admin-dashboard.html    admin/parent view
+├── main.md                 this file
+├── logo/                   real, used asset
+├── netlify/
+│   ├── functions/          live Netlify Functions
+│   ├── edge-functions/     admin-gate.js
+│   └── selfchecks/         node netlify/selfchecks/*.js to verify
+├── docs/
+│   ├── superpowers/        formal specs/plans from brainstorming sessions
+│   └── scratch-notes/      loose spec .txt/.pdf files that used to clutter root
+├── design-refs/            unused-but-kept theme/mockup images (jarvish-theme,
+│                            notes, time-table-theme, timer-background) --
+│                            not referenced by any code, moved out of the way
+├── netlify.toml / package.json / local-server.js / deno.lock
+```
+
+Deleted 2026-08-09: `api/` (14-file stale duplicate of `netlify/functions/` from the
+paused Vercel migration — never touched after the Supabase rewrite, never wired into
+anything live), `vercel.json`, `forge-netlify-deploy.zip`, `blob-background.html`.
+`publish = "."` in `netlify.toml` was **not** changed (user declined the `public/`
+restructure — bigger risk, touches the live deploy path, skipped for now).
 - **Site:** `forge-do` on Netlify (site ID `d0082c3f-5b9b-4ad8-b0c4-64756085fa4b`), free/dev-team plan (**not** Pro — matters, see gotchas below).
 - **Supabase project:** ref `mbpsusjemlgzrjocstea`, region `ap-south-1`.
 
