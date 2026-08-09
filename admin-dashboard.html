@@ -391,10 +391,12 @@ document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
    static page, same threat model as AUTH_HASH above), just enough to stop a
    casual "found the URL" request from working. */
 const ADMIN_API_KEY = '3c1ef3542cbdfa3aea177467fe892b59734572298a3d557a';
-/* Netlify edge Basic-Auth credential (see netlify.toml) -- sent explicitly rather than
-   relying on the browser to reuse a cached credential across this page and the function
-   URLs, since that depends on realm-matching behavior this project hasn't verified live. */
-const ADMIN_BASIC_AUTH = 'Basic ' + btoa('forgeadmin:Oy1ov0kYcgrd43JP2xV2hgB');
+/* No client-side Basic-Auth credential here on purpose. admin-gate.js (see netlify.toml)
+   already made the browser prompt for it once to load this page -- browsers cache Basic-Auth
+   per origin+realm and resend it automatically (including for fetch()) to any URL in the same
+   protection space, which covers /.netlify/functions/list-accounts and delete-account since
+   admin-gate.js sets the same realm on all three paths. Embedding the password again here would
+   just be a second copy of the same secret sitting in public JS for no benefit. */
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -464,7 +466,7 @@ async function loadAccounts(){
   try{
     const resp = await fetch('/.netlify/functions/list-accounts', {
       method: 'POST',
-      headers: { 'x-admin-key': ADMIN_API_KEY, 'Authorization': ADMIN_BASIC_AUTH }
+      headers: { 'x-admin-key': ADMIN_API_KEY }
     });
     const result = await resp.json();
     if(!resp.ok) throw new Error(result.error || 'Failed to load accounts');
@@ -495,7 +497,7 @@ async function terminateAccount(email){
   try{
     const resp = await fetch('/.netlify/functions/delete-account', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-admin-key': ADMIN_API_KEY, 'Authorization': ADMIN_BASIC_AUTH },
+      headers: { 'content-type': 'application/json', 'x-admin-key': ADMIN_API_KEY },
       body: JSON.stringify({ email })
     });
     const result = await resp.json();
