@@ -13,6 +13,7 @@ Student dashboard app ("Forge") for a B.Tech Computer Engineering student — AI
 - **AI:** Groq API, 3-key failover (`_groq-client.js` tries `GROQ_API_KEY` → `_2` → `_3` on rate-limit).
 - **Accounts DB:** Supabase Postgres (not Netlify Blobs — migrated off Blobs 2026-08-08, see below).
 - **Rate limiting:** `_rate-limit.js`, 30 req/hr/IP, backed by Netlify Blobs (still used for this only).
+- **Voice AI:** Gemini Live API (`gemini-3.1-flash-live-preview`) for Viva Prep's opt-in real-time voice mode — see 2026-08-10 entry below. Groq is still used for everything else (text-based grading, notes, doubts, etc.).
 
 ## Folder structure (cleaned up 2026-08-09)
 
@@ -44,6 +45,13 @@ restructure — bigger risk, touches the live deploy path, skipped for now).
 - **Supabase project:** ref `mbpsusjemlgzrjocstea`, region `ap-south-1`.
 
 ## Timeline (most recent first)
+
+**2026-08-10 — Notification dropdown fixes, real leaderboard, dynamic focus line, Gemini Live voice**
+- Fixed notification bell dropdown: z-index too low (bumped 50→9998) and a real hover-jitter bug (`#bellDropdown` is nested inside `#bellBtn`, whose `:hover` had `transform:translateY(-2px)` — since the dropdown is positioned relative to that same button, the panel visibly shifted every time the mouse re-entered the button's area while interacting with the open dropdown). Fixed by giving `#bellBtn` a background-only hover instead of transform.
+- Brainstorm leaderboard was 100% local/fake (hardcoded single "You" row). New public `netlify/functions/leaderboard.js` + `_account-store.js`'s `listBrainstormScores()` read every registered account's already-synced `forge-brainstorm-best` from Supabase and return the real top 10 (name + score only, never another student's email).
+- Home page's greeting subtitle was static fake copy ("You've got 2 lectures and 1 assignment due today"). Replaced with `renderFocusLine()`, which reuses `computeStudyPriority()` to name a real unstarted/weak chapter.
+- Added Gemini Live real-time voice mode to Viva Prep (`netlify/functions/viva-live-token.js` mints ephemeral tokens; browser connects directly to Gemini's WebSocket). Opt-in "Live Voice Mode" button, old simulated TTS/STT flow untouched as fallback. New env var `GEMINI_API_KEY`. See that commit's message for the exact verified model/endpoint/audio-format details (docs summaries got some of this wrong — verified everything empirically against the real API instead).
+- Deleted 7 orphaned throwaway Netlify sites from this account (auto-named, all from before `forge-do` existed) at user's request — only `forge-do` plus a few unrelated named ones remain.
 
 **2026-08-08/09 — Supabase migration + admin panel hardening**
 - Netlify Blobs' automatic `getStore()` context injection was broken in production (502 on `list-accounts`) even after a fresh prod redeploy — root cause never fully pinned down, so replaced the datastore instead of chasing it further.
