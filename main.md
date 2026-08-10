@@ -46,6 +46,9 @@ restructure — bigger risk, touches the live deploy path, skipped for now).
 
 ## Timeline (most recent first)
 
+**2026-08-10 (later) — Home page stat row layout fix**
+- `.stats` grid was `repeat(3,1fr)` with 4 cards (Active Courses / Assignments Due / Study Streak / Backlog Subject), so the 4th wrapped to its own row. Changed to `repeat(4,1fr)` — one clean line on desktop. Mobile breakpoint (`repeat(2,1fr)` under 900px) untouched. Commit `b750cd7`.
+
 **2026-08-10 — Notification dropdown fixes, real leaderboard, dynamic focus line, Gemini Live voice**
 - Fixed notification bell dropdown: z-index too low (bumped 50→9998) and a real hover-jitter bug (`#bellDropdown` is nested inside `#bellBtn`, whose `:hover` had `transform:translateY(-2px)` — since the dropdown is positioned relative to that same button, the panel visibly shifted every time the mouse re-entered the button's area while interacting with the open dropdown). Fixed by giving `#bellBtn` a background-only hover instead of transform.
 - Brainstorm leaderboard was 100% local/fake (hardcoded single "You" row). New public `netlify/functions/leaderboard.js` + `_account-store.js`'s `listBrainstormScores()` read every registered account's already-synced `forge-brainstorm-best` from Supabase and return the real top 10 (name + score only, never another student's email).
@@ -84,6 +87,7 @@ Names only — values live in Netlify's env var UI / were set via CLI, never rep
 - `ADMIN_API_KEY` — app-level header check for `list-accounts`/`delete-account` (separate from the edge gate)
 - `ADMIN_USER`, `ADMIN_PASS` — edge-function Basic-Auth gate on admin paths (rotated 2026-08-09)
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — server-side only, accounts DB
+- `GEMINI_API_KEY` — mints Gemini Live ephemeral tokens for Viva Prep's Live Voice Mode (`viva-live-token.js`). **Unverified provenance** — user pasted this key directly in chat 2026-08-10 without confirming where it came from; it worked instantly against the real API. Worth confirming it's actually the user's own properly-scoped key, not a shared/leaked one, since it's now live in production.
 
 Admin login password (for the browser's Basic-Auth prompt, and for the app-level email/password screen) — ask if you've lost track, don't put the literal value in this file.
 
@@ -99,6 +103,8 @@ Admin login password (for the browser's Basic-Auth prompt, and for the app-level
 - B.Sc(H) AI & DS track (second onboarding program) — blocked on user providing a real subject/chapter list, explicitly declined a placeholder.
 - Notes-in-chat (Ask Forge responses rendering as note cards) — not started, needs its own design pass.
 - Token-remaining display for Groq keys — needs research, Groq doesn't expose a simple remaining-quota endpoint.
+- Viva Prep Live Voice Mode's actual voice loop (mic capture → Gemini hears it → responds in audio) is **unverified past the token-mint step** — browser automation can't grant real mic permission, so this needs a real human test in a real browser before calling it done.
+- Confirm the `GEMINI_API_KEY` provenance (see env vars section above) — currently unverified whose/what-scope key it is.
 
 ## Gotchas worth remembering
 
@@ -106,3 +112,5 @@ Admin login password (for the browser's Basic-Auth prompt, and for the app-level
 - Supabase's pooler TLS cert chain roots at a private "Supabase Root 2021 CA," not a public CA — Node's default trust store rejects it (`SELF_SIGNED_CERT_IN_CHAIN`). Don't disable cert verification to work around this; pin the actual chain instead (fetched once via a manual Postgres-SSL-negotiation + `tls.connect`, saved as a `.pem`).
 - Netlify's `netlify.toml` `Basic-Auth` header feature is **Pro-plan only** and fails silently (no error, just never gates anything) on lower plans — always verify auth gates live with curl (`-u user:pass`, check for 401 vs 200), don't trust the config alone.
 - This site is on `nf_team_dev` (free/dev-team) plan — check before assuming any Pro-only Netlify feature will work.
+- Gemini Live API: `WebFetch`-summarized docs got the model name wrong (invented `gemini-3.1-flash-live-preview`... actually got lucky, that one turned out real, but a different summarized page invented details that didn't check out) and the sample rate wrong. Don't trust doc summaries for this API blind — verify empirically against the real WebSocket (mint a token, try candidate model names, read the actual close-reason error text, which names valid alternatives). Two non-obvious facts confirmed this way: (1) ephemeral tokens require the `...GenerativeService.BidiGenerateContentConstrained` WebSocket method name, not the plain `BidiGenerateContent` used with a raw API key; (2) output audio is `audio/pcm;rate=24000` regardless of the 16kHz input rate — parse the rate from each response's `mimeType` rather than assuming a fixed value.
+- This Netlify account had a pile of orphaned auto-named throwaway sites (12 total before cleanup) from earlier sessions before `forge-do` existed. 7 were deleted 2026-08-10 at user's request; remaining non-`forge-do` sites (`polite-cactus-0590b2`, `dazzling-khapse-465134`, `glowing-puffpuff-407cab`, `monarchin`) weren't named for deletion — don't assume they're safe to remove without asking.
