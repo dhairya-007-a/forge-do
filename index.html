@@ -870,6 +870,12 @@
   .progress-fill{ width:0 !important; transition:width 1.1s cubic-bezier(.22,.68,0,1); }
   .icon-btn, .pill-btn, .hero-cta, .add-city-btn{ transition:transform .18s ease, box-shadow .18s ease, background .18s ease; }
   .icon-btn:hover{ transform:translateY(-2px); }
+  /* #bellBtn contains its own dropdown (.dropdown is position:absolute relative to
+     this button), so the hover-lift above shifts the whole open dropdown by the same
+     -2px every time the mouse re-enters this box -- with the dropdown open, the
+     mouse is constantly moving in/out of that shifted hit-area, causing a visible
+     jitter/"slip". Bell button keeps its own hover feedback via background instead. */
+  #bellBtn:hover{ transform:none; background:var(--cream-2); }
   .side-nav a{ cursor:pointer; }
 
   /* ---------- SPLASH SCREEN ---------- */
@@ -1059,7 +1065,7 @@
     position:absolute; top:56px; right:0; width:280px; background:var(--white);
     border-radius:var(--radius-md); box-shadow:var(--shadow); padding:10px;
     opacity:0; transform:translateY(-8px) scale(.97); pointer-events:none;
-    transition:all .22s cubic-bezier(.22,.68,0,1); z-index:50;
+    transition:all .22s cubic-bezier(.22,.68,0,1); z-index:9998;
   }
   .dropdown.open{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
   @media (max-width:520px){
