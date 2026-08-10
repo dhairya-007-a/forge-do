@@ -2501,7 +2501,7 @@
       <div class="hero-text">
         <div class="eyebrow" id="heroEyebrow">—</div>
         <h1 id="heroGreeting">Hey, Dhairya</h1>
-        <p>You've got 2 lectures and 1 assignment due today. Let's keep the streak going.</p>
+        <p id="heroFocusLine">Loading today's focus…</p>
       </div>
       <div class="hero-ring" id="heroRing">
         <div class="val"><b id="heroRingPct">0%</b><span>SEMESTER</span></div>
@@ -4800,6 +4800,25 @@ function allocateStudyDays(orderedChapters, daysRemaining){
   }
   return days;
 }
+
+function renderFocusLine(){
+  const el = document.getElementById('heroFocusLine');
+  if(!el) return;
+  let best = null;
+  for(const subject in COURSE_CHAPTERS){
+    const picks = computeStudyPriority(subject);
+    if(picks.length && (!best || picks[0].score > best.score)){
+      best = { subject, chapter: picks[0].chapter, status: picks[0].status, score: picks[0].score };
+    }
+  }
+  if(!best){
+    el.textContent = "No weak topics flagged right now — great time to get ahead with a quiz or notes.";
+    return;
+  }
+  const verb = best.status === 'weak' ? 'needs work' : best.status === 'upcoming' ? "hasn't been started yet" : 'could use a review';
+  el.textContent = `${best.chapter} in ${best.subject} ${verb} — that's today's best use of your time.`;
+}
+renderFocusLine();
 
 function computeAllSubjectsPriority(examDates){
   const today = new Date();
@@ -7168,18 +7187,44 @@ function renderBrainstormPattern(){
   });
 }
 
-function renderLeaderboard(){
+function bsLbRow(rank, name, score, isYou){
+  const initial = (name.charAt(0) || '?').toUpperCase();
+  const rankDisplay = rank === 1 ? '🏆' : rank ? '#' + rank : '—';
+  return `
+    <div class="bs-lb-row${isYou ? ' me' : ''}">
+      <div class="bs-lb-rank">${rankDisplay}</div>
+      <div class="bs-lb-avatar">${initial}</div>
+      <div class="bs-lb-name">${escapeHtml(name)}${isYou ? ' (You)' : ''}</div>
+      <div class="bs-lb-score mono">${score} pts</div>
+    </div>`;
+}
+
+async function renderLeaderboard(){
   const myName = bsCurrentName();
   const myBest = parseInt(forgeStore.getItem('forge-brainstorm-best') || '0', 10);
-  const initial = myName.charAt(0).toUpperCase();
+  const profile = JSON.parse(forgeStore.getItem('forge-profile') || 'null');
   const list = document.getElementById('bsLeaderboard');
-  list.innerHTML = `
-    <div class="bs-lb-row me">
-      <div class="bs-lb-rank">${myBest > 0 ? '🏆' : '—'}</div>
-      <div class="bs-lb-avatar">${initial}</div>
-      <div class="bs-lb-name">${myName} (You)</div>
-      <div class="bs-lb-score mono">${myBest} pts</div>
-    </div>`;
+  // Local-only fallback (no email yet, or the classmates fetch fails) -- still show the
+  // student's own score so the panel is never empty.
+  list.innerHTML = bsLbRow(null, myName, myBest, true);
+  if(!profile || !profile.email) return;
+
+  try{
+    const resp = await fetch('/.netlify/functions/leaderboard', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: profile.email })
+    });
+    const result = await resp.json();
+    if(!resp.ok) throw new Error(result.error || 'Failed to load leaderboard');
+    const rows = result.leaderboard || [];
+    const meInTop = rows.some(r => r.isYou);
+    let html = rows.map((r, i) => bsLbRow(i + 1, `${r.firstName} ${r.lastName}`.trim(), r.score, r.isYou)).join('');
+    if(!meInTop) html += bsLbRow(null, myName, myBest, true);
+    list.innerHTML = html || bsLbRow(null, myName, myBest, true);
+  } catch(e){
+    /* keep the local-only fallback already rendered above */
+  }
 }
 
 bsLoadTopic();

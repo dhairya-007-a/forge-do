@@ -13,6 +13,9 @@ function makeFakeClient(){
       return {
         async upsert(row){ mem.set(row.email, row); return { error: null }; },
         select(){
+          // Also thenable (like the real supabase-js query builder) so callers that
+          // await select(...) directly, with no .eq()/.order() chained, still work
+          // (listBrainstormScores reads every row this way).
           return {
             eq(_col, email){
               return { async maybeSingle(){
@@ -23,7 +26,8 @@ function makeFakeClient(){
             order(){
               const rows = [...mem.values()].sort((a, b) => (b.last_synced_at || '').localeCompare(a.last_synced_at || ''));
               return Promise.resolve({ data: rows, error: null });
-            }
+            },
+            then(resolve){ resolve({ data: [...mem.values()], error: null }); }
           };
         },
         delete(){
@@ -40,7 +44,7 @@ require.cache[supabasePath] = {
 process.env.SUPABASE_URL = 'http://fake.local';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'fake-key';
 
-const { getAccount, setAccount, deleteAccount, listAccounts } = require('../functions/_account-store');
+const { getAccount, setAccount, deleteAccount, listAccounts, listBrainstormScores } = require('../functions/_account-store');
 
 async function run(){
   // 1. New account: getAccount returns null before any write.
@@ -68,6 +72,16 @@ async function run(){
   const afterDelete = await listAccounts();
   assert.strictEqual(afterDelete.length, 1);
   assert.strictEqual(afterDelete[0].email, 'b@x.com');
+
+  // 5. listBrainstormScores: only positive scores, sorted desc, isYou flags the caller,
+  //    and it never leaks another account's email.
+  await setAccount('c@x.com', { 'forge-profile': JSON.stringify({ firstName: 'Cy', lastName: 'Z' }), 'forge-brainstorm-best': '40' });
+  await setAccount('b@x.com', { 'forge-profile': JSON.stringify({ firstName: 'Bo', lastName: 'Y' }), 'forge-brainstorm-best': '0' });
+  const scores = await listBrainstormScores('c@x.com');
+  assert.strictEqual(scores.length, 1, 'zero-score accounts should be excluded');
+  assert.strictEqual(scores[0].firstName, 'Cy');
+  assert.strictEqual(scores[0].isYou, true);
+  assert.strictEqual(typeof scores[0].email, 'undefined', 'must never return another account\'s email');
 
   console.log('All _account-store self-checks passed.');
 }
