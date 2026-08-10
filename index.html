@@ -1878,6 +1878,9 @@
   .viva-avatar-wrap.listening{ animation:vivaListenPulse 1.2s ease-in-out infinite; }
   @keyframes vivaListenPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.04); } }
   .viva-status{ font-size:13px; color:var(--ink-soft); font-weight:600; }
+  .viva-live-session .viva-stage{ padding:40px 20px; text-align:center; }
+  .viva-live-session .viva-status{ font-size:15px; }
+  .viva-live-session .empty-note{ font-size:12.5px; color:#7A2632; background:var(--pink-soft); border-radius:var(--radius-sm,12px); padding:12px 14px; margin-bottom:14px; }
   .viva-transcript{
     max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;
     margin-bottom:16px; padding:4px;
@@ -3252,6 +3255,21 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
             Start Viva
           </button>
+          <button class="note-action-btn btn-pop" id="vivaLiveStartBtn" style="margin-left:8px;">
+            🎙️ Live Voice Mode <span class="nav-beta-tag" style="margin-left:6px;">Beta</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- LIVE VOICE MODE — real Gemini Live conversation, separate from the simulated
+           TTS/STT flow above. If this has issues, the flow above still works untouched. -->
+      <div class="viva-live-session" id="vivaLiveSession" style="display:none;">
+        <div class="viva-stage">
+          <div class="viva-status" id="vivaLiveStatus">Connecting…</div>
+        </div>
+        <div class="empty-note" id="vivaLiveError" style="display:none;"></div>
+        <div class="viva-controls">
+          <button class="note-action-btn btn-pop" id="vivaLiveEndBtn">End Live Viva</button>
         </div>
       </div>
 
@@ -7460,6 +7478,181 @@ const vivaMicBtnEl = document.getElementById('vivaMicBtn');
 new MutationObserver(()=>{
   vivaSetListening(vivaMicBtnEl.classList.contains('listening'));
 }).observe(vivaMicBtnEl, { attributes: true, attributeFilter: ['class'] });
+
+/* ---------- VIVA PREP: LIVE VOICE MODE ----------
+   Real bidirectional voice conversation via Gemini Live, separate from the simulated
+   TTS/STT flow above (which stays untouched as a working fallback). Backend mints a
+   short-lived token (netlify/functions/viva-live-token.js) so the real API key never
+   reaches the browser; the browser then talks to Gemini's Live WebSocket directly. */
+let vivaLiveWs = null;
+let vivaLiveAudioCtx = null;
+let vivaLiveMicStream = null;
+let vivaLiveMicProcessor = null;
+let vivaLivePlaybackCtx = null;
+let vivaLivePlaybackTime = 0;
+
+function vivaLiveSetStatus(text, isError){
+  const el = document.getElementById('vivaLiveStatus');
+  if(el) el.textContent = text;
+  const errEl = document.getElementById('vivaLiveError');
+  if(errEl){
+    if(isError){ errEl.textContent = text; errEl.style.display = 'block'; }
+    else errEl.style.display = 'none';
+  }
+}
+
+function vivaLivePcm16Base64(float32){
+  const buf = new ArrayBuffer(float32.length * 2);
+  const view = new DataView(buf);
+  for(let i = 0; i < float32.length; i++){
+    const s = Math.max(-1, Math.min(1, float32[i]));
+    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  let binary = '';
+  const bytes = new Uint8Array(buf);
+  for(let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+// Nearest-neighbor decimation, not a proper anti-aliasing resample -- good enough for
+// voice at this scope. Gemini Live requires exactly 16kHz mono PCM16 input.
+function vivaLiveDownsampleTo16k(float32, inputRate){
+  if(inputRate === 16000) return float32;
+  const ratio = inputRate / 16000;
+  const outLength = Math.floor(float32.length / ratio);
+  const out = new Float32Array(outLength);
+  for(let i = 0; i < outLength; i++) out[i] = float32[Math.floor(i * ratio)];
+  return out;
+}
+
+function vivaLivePlayChunk(base64, mimeType){
+  if(!vivaLivePlaybackCtx) vivaLivePlaybackCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const rateMatch = /rate=(\d+)/.exec(mimeType || '');
+  const rate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const view = new DataView(bytes.buffer);
+  const sampleCount = bytes.length / 2;
+  const float32 = new Float32Array(sampleCount);
+  for(let i = 0; i < sampleCount; i++) float32[i] = view.getInt16(i * 2, true) / 32768;
+
+  const buffer = vivaLivePlaybackCtx.createBuffer(1, sampleCount, rate);
+  buffer.copyToChannel(float32, 0);
+
+  const now = vivaLivePlaybackCtx.currentTime;
+  const startAt = Math.max(now, vivaLivePlaybackTime);
+  const src = vivaLivePlaybackCtx.createBufferSource();
+  src.buffer = buffer;
+  src.connect(vivaLivePlaybackCtx.destination);
+  src.start(startAt);
+  vivaLivePlaybackTime = startAt + buffer.duration;
+}
+
+function vivaLiveStartMicStreaming(){
+  vivaLiveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = vivaLiveAudioCtx.createMediaStreamSource(vivaLiveMicStream);
+  vivaLiveMicProcessor = vivaLiveAudioCtx.createScriptProcessor(4096, 1, 1);
+  source.connect(vivaLiveMicProcessor);
+  vivaLiveMicProcessor.connect(vivaLiveAudioCtx.destination);
+  vivaLiveMicProcessor.onaudioprocess = (e)=>{
+    if(!vivaLiveWs || vivaLiveWs.readyState !== WebSocket.OPEN) return;
+    const input = e.inputBuffer.getChannelData(0);
+    const down = vivaLiveDownsampleTo16k(input, vivaLiveAudioCtx.sampleRate);
+    const base64 = vivaLivePcm16Base64(down);
+    vivaLiveWs.send(JSON.stringify({ realtimeInput: { audio: { data: base64, mimeType: 'audio/pcm;rate=16000' } } }));
+  };
+}
+
+function vivaLiveStopMic(){
+  if(vivaLiveMicProcessor){ vivaLiveMicProcessor.disconnect(); vivaLiveMicProcessor = null; }
+  if(vivaLiveAudioCtx){ vivaLiveAudioCtx.close(); vivaLiveAudioCtx = null; }
+  if(vivaLiveMicStream){ vivaLiveMicStream.getTracks().forEach(t => t.stop()); vivaLiveMicStream = null; }
+}
+
+async function vivaLiveStart(){
+  document.getElementById('vivaSetup').style.display = 'none';
+  document.getElementById('vivaLiveSession').style.display = 'block';
+  vivaLiveSetStatus('Connecting…');
+
+  const subjectSelect = document.getElementById('vivaSubjectSelect');
+  const subject = subjectSelect ? subjectSelect.value : '';
+
+  let token;
+  try{
+    const resp = await fetch('/.netlify/functions/viva-live-token', { method: 'POST' });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Failed to get session token');
+    token = data.token;
+  } catch(e){
+    vivaLiveSetStatus("Couldn't start live viva — " + e.message, true);
+    return;
+  }
+
+  try{
+    vivaLiveMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch(e){
+    vivaLiveSetStatus('Microphone access denied — allow mic access and try again', true);
+    return;
+  }
+
+  const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=' + encodeURIComponent(token);
+  vivaLiveWs = new WebSocket(wsUrl);
+
+  vivaLiveWs.onopen = ()=>{
+    vivaLiveWs.send(JSON.stringify({
+      setup: {
+        model: 'models/gemini-3.1-flash-live-preview',
+        generationConfig: { responseModalities: ['AUDIO'] },
+        systemInstruction: {
+          parts: [{ text: `You are a strict but fair college viva examiner for a B.Tech Computer Engineering student, Semester 3. Ask one question at a time about ${subject || 'their Semester 3 subjects'}, wait for their spoken answer, then briefly react (correct / partial / incorrect) and either ask a follow-up or move to the next topic. Keep every turn short — this is a spoken conversation, not an essay. Start now by greeting the student in one sentence and asking your first question.` }]
+        }
+      }
+    }));
+  };
+
+  vivaLiveWs.onmessage = async (ev)=>{
+    const raw = ev.data instanceof Blob ? await ev.data.text() : ev.data;
+    let msg;
+    try{ msg = JSON.parse(raw); } catch(e){ return; }
+    if(msg.setupComplete){
+      vivaLiveSetStatus('🎙️ Live — speak whenever you like');
+      vivaLiveStartMicStreaming();
+      return;
+    }
+    const parts = msg.serverContent && msg.serverContent.modelTurn && msg.serverContent.modelTurn.parts;
+    if(parts){
+      parts.forEach(p=>{
+        if(p.inlineData && p.inlineData.data){
+          vivaLiveSetStatus('Examiner speaking…');
+          vivaLivePlayChunk(p.inlineData.data, p.inlineData.mimeType);
+        }
+      });
+    }
+    if(msg.serverContent && msg.serverContent.turnComplete){
+      vivaLiveSetStatus('🎙️ Live — speak whenever you like');
+    }
+  };
+
+  vivaLiveWs.onerror = ()=>{
+    vivaLiveSetStatus('Connection error — try ending and starting again', true);
+  };
+  vivaLiveWs.onclose = (ev)=>{
+    if(ev.code !== 1000) vivaLiveSetStatus('Session closed (' + (ev.reason || ev.code) + ')', true);
+    vivaLiveStopMic();
+  };
+}
+
+function vivaLiveEnd(){
+  if(vivaLiveWs){ try{ vivaLiveWs.close(); }catch(e){} vivaLiveWs = null; }
+  vivaLiveStopMic();
+  vivaLivePlaybackTime = 0;
+  document.getElementById('vivaLiveSession').style.display = 'none';
+  document.getElementById('vivaSetup').style.display = 'block';
+}
+
+document.getElementById('vivaLiveStartBtn').addEventListener('click', vivaLiveStart);
+document.getElementById('vivaLiveEndBtn').addEventListener('click', vivaLiveEnd);
 </script>
 
 
