@@ -3571,6 +3571,16 @@ function applyProfile(profile){
   if(chipName) chipName.textContent = fullName;
   const chipRole = document.querySelector('.profile-chip .role');
   if(chipRole && profile.level && profile.course) chipRole.textContent = `${profile.level} · ${profile.course}`;
+  // Mobile "more" sheet has its own profile block (#msName/#msAvatar/#msRole), separate
+  // DOM from the desktop .profile-chip -- was only ever synced once at initial page
+  // load (see the now-removed one-time IIFE below), so a new student's real name never
+  // replaced the "Dhairya Chhaiya" placeholder until a manual page refresh.
+  const msName = document.getElementById('msName');
+  if(msName) msName.textContent = fullName;
+  const msAvatar = document.getElementById('msAvatar');
+  if(msAvatar) msAvatar.textContent = initial;
+  const msRole = document.getElementById('msRole');
+  if(msRole && profile.level && profile.course) msRole.textContent = `${profile.level} · ${profile.course}`;
   renderGreeting();
   if(typeof renderLeaderboard === 'function') renderLeaderboard();
 }
@@ -3887,16 +3897,6 @@ document.querySelectorAll('.ms-theme-btn').forEach(b=>{
   b.addEventListener('click', ()=>{ setAppTheme(b.dataset.mstheme); syncMsThemeButtons(); });
 });
 syncMsThemeButtons();
-/* keep sheet profile in sync */
-(function(){
-  try{
-    const p = JSON.parse(forgeStore.getItem('forge-profile') || 'null');
-    if(p && p.firstName){
-      document.getElementById('msName').textContent = p.firstName + ' ' + (p.lastName||'');
-      document.getElementById('msAvatar').textContent = p.firstName[0].toUpperCase();
-    }
-  }catch(e){}
-})();
 /* swipe down on sheet to dismiss */
 (function(){
   let sy = null;
@@ -7107,14 +7107,17 @@ async function bsFinish(){
       }
     } catch(e){ /* offline — score on submission count alone below */ }
   }
-  const score = validIdeas.length * 10 + validCount * 15;
+  // Capped at 10 pts per round, scaled by the fraction of submitted ideas judged valid
+  // (all valid = 10, half valid = 5, none valid = 0) rather than the old unbounded
+  // +10/idea +15/valid count, which let scores climb past 300+.
+  const score = validIdeas.length > 0 ? Math.round((validCount / validIdeas.length) * 10) : 0;
 
   document.getElementById('bsScoreNum').textContent = score;
-  const ringDeg = Math.min(score / 150, 1) * 360;
+  const ringDeg = Math.min(score / 10, 1) * 360;
   document.getElementById('bsScoreRing').style.background = `conic-gradient(var(--green) ${ringDeg}deg, var(--cream-2) ${ringDeg}deg 360deg)`;
   document.getElementById('bsBreakdown').innerHTML = feedback
-    ? `<b>${validIdeas.length}</b> ideas submitted · <b>${validCount}</b> judged valid by Forge<br>+10 per idea, +15 bonus per valid idea<br><span style="display:block; margin-top:8px;">${escapeHtml(feedback)}</span>`
-    : `<b>${validIdeas.length}</b> ideas submitted · <b>${validCount}</b> judged valid<br>+10 per idea, +15 bonus per valid idea<br>(Couldn't reach Forge AI to grade — scored on submission count only)`;
+    ? `<b>${validIdeas.length}</b> ideas submitted · <b>${validCount}</b> judged valid by Forge<br>Score = 10 × (valid ÷ submitted)<br><span style="display:block; margin-top:8px;">${escapeHtml(feedback)}</span>`
+    : `<b>${validIdeas.length}</b> ideas submitted · <b>${validCount}</b> judged valid<br>Score = 10 × (valid ÷ submitted)<br>(Couldn't reach Forge AI to grade — scored 0 for this round)`;
 
   const sparkWrap = document.getElementById('bsSparkles');
   sparkWrap.innerHTML = '';

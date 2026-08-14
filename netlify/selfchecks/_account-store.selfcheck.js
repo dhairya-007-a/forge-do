@@ -73,14 +73,16 @@ async function run(){
   assert.strictEqual(afterDelete.length, 1);
   assert.strictEqual(afterDelete[0].email, 'b@x.com');
 
-  // 5. listBrainstormScores: only positive scores, sorted desc, isYou flags the caller,
-  //    and it never leaks another account's email.
+  // 5. listBrainstormScores: every registered account included (even 0 pts), sorted
+  //    desc, isYou flags the caller, and it never leaks another account's email.
   await setAccount('c@x.com', { 'forge-profile': JSON.stringify({ firstName: 'Cy', lastName: 'Z' }), 'forge-brainstorm-best': '40' });
   await setAccount('b@x.com', { 'forge-profile': JSON.stringify({ firstName: 'Bo', lastName: 'Y' }), 'forge-brainstorm-best': '0' });
   const scores = await listBrainstormScores('c@x.com');
-  assert.strictEqual(scores.length, 1, 'zero-score accounts should be excluded');
-  assert.strictEqual(scores[0].firstName, 'Cy');
+  assert.strictEqual(scores.length, 2, 'zero-score accounts should still be listed');
+  assert.strictEqual(scores[0].firstName, 'Cy', 'higher score should rank first');
   assert.strictEqual(scores[0].isYou, true);
+  assert.strictEqual(scores[1].firstName, 'Bo');
+  assert.strictEqual(scores[1].score, 0);
   assert.strictEqual(typeof scores[0].email, 'undefined', 'must never return another account\'s email');
 
   console.log('All _account-store self-checks passed.');

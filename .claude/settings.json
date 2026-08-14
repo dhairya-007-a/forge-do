@@ -1,5 +1,10 @@
 {
   "enabledPlugins": {
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "ruflo-core@ruflo": true,
+    "ruflo-swarm@ruflo": true,
+    "ruflo-rag-memory@ruflo": true,
+    "circleback@claude-plugins-official": true,
+    "ruflo-adr@ruflo": true
   }
 }

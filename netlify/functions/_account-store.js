@@ -74,6 +74,9 @@ async function listBrainstormScores(viewerEmail){
   const { data, error } = await db().from('accounts').select('email, first_name, last_name, data');
   if(error) throw new Error(error.message);
   const viewer = emailKey(viewerEmail || '');
+  // Every registered account shows up, even at 0 pts -- this is a small class-sized
+  // leaderboard meant to feel populated, not a top-N cutoff. Capped at 50 as a cheap
+  // safety net against unbounded growth, not a real limit at this app's scale.
   return data
     .map(a => ({
       firstName: a.first_name || '',
@@ -81,9 +84,8 @@ async function listBrainstormScores(viewerEmail){
       score: parseInt((a.data && a.data['forge-brainstorm-best']) || '0', 10),
       isYou: a.email === viewer
     }))
-    .filter(a => a.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
+    .slice(0, 50);
 }
 
 module.exports = { getAccount, setAccount, deleteAccount, listAccounts, listBrainstormScores };
